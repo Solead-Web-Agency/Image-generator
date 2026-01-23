@@ -1,0 +1,173 @@
+{
+  "project_name": "Rankwell - Images Expertises V2",
+  "version": "2.0 - Glassmorphism & Minimalist",
+  "style_global": {
+    "aesthetic": "Glassmorphism moderne, design minimaliste élégant, effets de transparence et blur, light mode premium",
+    "color_palette": [
+      "#0066FF",
+      "#00E5FF", 
+      "#E0F2FE",
+      "#F0F9FF",
+      "#FFFFFF",
+      "rgba(255, 255, 255, 0.1)"
+    ],
+    "mood": "Clean, épuré, premium, futuriste subtil, aéré, lumineux",
+    "lighting": "Natural ambient light, soft backlight, glass reflections, subtle shadows",
+    "composition": "Minimal centered elements, generous white space, floating glass panels, depth through transparency",
+    "dimensions": "1200x800px, landscape orientation, 3:2 aspect ratio",
+    "output_format": "High-resolution PNG with transparency support",
+    "key_effects": [
+      "Glassmorphism (panneaux transparents avec blur backdrop)",
+      "Soft drop shadows",
+      "Gradient subtle dans les backgrounds",
+      "Floating elements avec depth",
+      "Clean typography integration",
+      "Neumorphism accents"
+    ]
+  },
+  "brand_identity": {
+    "name": "Rankwell",
+    "industry": "Digital Marketing Agency - SEO, SEA, Data Analytics",
+    "positioning": "Business centrix approach, GEO native, performance-driven",
+    "visual_language": "Clean, light, glassmorphism, minimalist premium"
+  },
+  "images": [
+    {
+      "id": "image_01_geo_seo_glass",
+      "section": "Expertises - GEO & SEO",
+      "context": "Service GEO & SEO avec approche minimaliste et moderne",
+      "prompt_principal": "Minimalist glassmorphism illustration of search engine ecosystem. Center: elegant floating glass panel containing a simple search bar with subtle glow. Left side: clean Google 'G' icon with upward trending line chart in soft blue. Right side: abstract AI brain made of connected dots and lines representing ChatGPT/Perplexity/Gemini, rendered in cyan tones. Background: clean white to light blue gradient (#F0F9FF to #E0F2FE) with subtle floating geometric shapes. Style: ultra-clean glassmorphism design, frosted glass effects, soft shadows, premium minimalist aesthetic, generous negative space, professional light mode interface",
+      "elements_cles": [
+        "Panneau de verre central flottant avec search bar épurée",
+        "Icône Google stylisée simple et propre",
+        "Réseau de points/lignes pour représenter l'IA (abstrait et minimal)",
+        "Graphique de croissance subtil avec ligne montante",
+        "Effets de transparence et blur (glassmorphism)",
+        "Background blanc-bleu très clair avec gradient doux",
+        "Ombres portées subtiles et douces",
+        "Beaucoup d'espace négatif"
+      ],
+      "avoid": "Complexité excessive, trop de couleurs, éléments chargés, dark mode, effets trop prononcés",
+      "technical_specs": {
+        "style": "Glassmorphism, flat design premium, minimal illustration",
+        "dominant_colors": ["#0066FF", "#00E5FF", "#F0F9FF", "#FFFFFF"],
+        "focal_point": "Panneau de verre central avec search bar",
+        "transparency": "60-80% opacity sur éléments de verre, backdrop-filter blur"
+      }
+    },
+    {
+      "id": "image_02_sea_glass",
+      "section": "Expertises - SEA",
+      "context": "Service SEA avec focus sur la clarté et la performance",
+      "prompt_principal": "Clean glassmorphism visualization of advertising performance. Center: floating frosted glass card displaying simple rising graph with clean upward arrow and euro symbol (€). Left: minimalist ad icon with pulse effect. Right: target bullseye with simple conversion path line. Background: white to soft cyan gradient (#FFFFFF to #E0F2FE) with subtle floating glass shapes. Foreground: small floating glass panels showing KPI numbers (CPC, ROI) in elegant typography. Style: ultra-minimal glassmorphism aesthetic, soft depth, clean lines, premium light interface, sophisticated simplicity, generous breathing room",
+      "elements_cles": [
+        "Carte en verre dépoli centrale avec graphique de croissance simple",
+        "Symbole € élégant et épuré",
+        "Icône de publicité minimaliste avec effet de pulse",
+        "Cible (target) simple avec flèche de conversion",
+        "Petites cartes flottantes avec métriques (CPC, ROI, CTR)",
+        "Effets de verre avec blur et transparence",
+        "Typographie clean et lisible",
+        "Background très clair avec gradient subtil blanc-cyan"
+      ],
+      "avoid": "Dashboard trop complexe, trop de données affichées, couleurs saturées, dark mode",
+      "technical_specs": {
+        "style": "Glassmorphism cards, minimal dashboard aesthetic, clean data viz",
+        "dominant_colors": ["#0066FF", "#00E5FF", "#FFFFFF", "#10B981"],
+        "focal_point": "Glass card central avec graphique montant",
+        "transparency": "Frosted glass effect avec blur, soft shadows"
+      }
+    },
+    {
+      "id": "image_03_data_analytics_glass",
+      "section": "Expertises - Data & Analytics",
+      "context": "Service Data avec approche élégante et claire",
+      "prompt_principal": "Elegant glassmorphism data visualization. Center: large frosted glass panel showing simple clean line graph with smooth curves and data points. Left: minimal tracking icon (pixel/tag) with connection nodes. Right: A/B test visualization with two glass cards showing variant comparison. Bottom: simple conversion funnel rendered as clean geometric shapes with soft glow. Background: pristine white to light blue gradient (#FFFFFF to #F0F9FF) with floating abstract shapes suggesting data constellation. Style: premium glassmorphism aesthetic, ultra-clean data viz, sophisticated minimalism, soft depth through transparency, generous white space, professional light mode analytics interface",
+      "elements_cles": [
+        "Grand panneau de verre avec graphique linéaire élégant",
+        "Courbes de données douces et lisibles",
+        "Icône tracking minimaliste (pixel/tag)",
+        "Visualisation A/B test avec deux cartes en verre comparatives",
+        "Entonnoir de conversion géométrique simple",
+        "Points de données connectés de façon minimaliste",
+        "Effets de transparence et blur sophistiqués",
+        "Background blanc immaculé avec touches de bleu clair"
+      ],
+      "avoid": "Graphiques trop complexes, trop de layers, couleurs vives, style trop technique",
+      "technical_specs": {
+        "style": "Glassmorphism panels, clean analytics, minimal data visualization",
+        "dominant_colors": ["#0066FF", "#00E5FF", "#FFFFFF", "#F0F9FF"],
+        "focal_point": "Large glass panel avec line graph",
+        "transparency": "Multiple layers de verre avec blur effects"
+      }
+    }
+  ],
+  "instructions_generation": {
+    "workflow": [
+      "1. Privilégier la simplicité et la clarté sur la complexité",
+      "2. Utiliser généreusement l'espace négatif (white space)",
+      "3. Appliquer des effets de glassmorphism subtils mais visibles",
+      "4. Maintenir une palette très claire (light mode)",
+      "5. S'assurer que les 3 images respirent et se complètent",
+      "6. Éviter la surcharge visuelle - less is more"
+    ],
+    "glassmorphism_guide": {
+      "background_blur": "backdrop-filter: blur(10-20px)",
+      "opacity": "60-80% sur les panneaux de verre",
+      "border": "1px solid rgba(255, 255, 255, 0.3)",
+      "shadow": "soft drop shadows (0 8px 32px rgba(0, 102, 255, 0.1))",
+      "gradient_background": "Très subtil, blanc vers bleu clair"
+    },
+    "quality_checks": [
+      "Les images sont épurées et respirent",
+      "Les effets de verre sont subtils mais présents",
+      "La palette reste claire et lumineuse",
+      "Chaque image est immédiatement lisible",
+      "Le style est premium et sophistiqué",
+      "Les 3 images forment un ensemble cohérent"
+    ]
+  },
+  "color_psychology": {
+    "white_space": "Professionnalisme, clarté, premium",
+    "blue_accents": "Confiance, technologie, expertise",
+    "cyan_touches": "Innovation, modernité, fraîcheur",
+    "glass_effects": "Transparence, sophistication, futurisme"
+  },
+  "naming_convention": {
+    "format": "rankwell-[section]-glass-[resolution].png",
+    "examples": [
+      "rankwell-geo-seo-glass-1200x800.png",
+      "rankwell-sea-glass-1200x800.png",
+      "rankwell-data-analytics-glass-1200x800.png"
+    ]
+  },
+  "inspiration_references": {
+    "style": "Apple design language, iOS glassmorphism, modern SaaS dashboards, Stripe illustrations",
+    "mood": "Clean, breathable, premium, sophisticated simplicity",
+    "examples": [
+      "Apple website product cards",
+      "Stripe payment interface",
+      "Linear app aesthetic",
+      "Notion light mode illustrations"
+    ]
+  },
+  "comparison_with_v1": {
+    "version_1": {
+      "style": "3D isometric, complex, colorful gradients, dense composition",
+      "mood": "Tech-forward, dynamic, energetic",
+      "best_for": "Clients cherchant impact visuel fort et modernité prononcée"
+    },
+    "version_2": {
+      "style": "Glassmorphism, minimal, light mode, generous spacing",
+      "mood": "Premium, sophisticated, clean, breathable",
+      "best_for": "Clients recherchant élégance, simplicité sophistiquée, approche haut de gamme"
+    },
+    "recommendation": "Tester les deux styles et voir lequel correspond le mieux à l'identité que Rankwell souhaite projeter"
+  },
+  "notes": {
+    "target_audience": "Entreprises B2B premium et e-commerce haut de gamme recherchant sophistication et clarté",
+    "brand_perception": "Élégante, claire, premium, confiante, moderne sans être agressive",
+    "differentiation": "Le glassmorphism apporte une touche de sophistication et de modernité subtile, moins vue chez les agences SEO classiques",
+    "usage_context": "Ces images doivent respirer et laisser le contenu texte briller, tout en apportant une touche visuelle distinctive"
+  }
+}

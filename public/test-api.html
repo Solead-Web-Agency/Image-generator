@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API OpenAI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background: #f5f5f5;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test API OpenAI - Diagnostic</h1>
+    
+    <div>
+        <h3>Clé API détectée :</h3>
+        <p id="apiKeyDisplay"></p>
+    </div>
+
+    <div>
+        <h3>Tests disponibles :</h3>
+        <button onclick="testListModels()">1. Tester liste des modèles (simple)</button>
+        <button onclick="testDallE2()">2. Tester DALL-E 2</button>
+        <button onclick="testDallE3()">3. Tester DALL-E 3</button>
+        <button onclick="testChatGPT()">4. Tester ChatGPT (GPT-4)</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script src="config.js"></script>
+    <script>
+        const apiKey = CONFIG?.OPENAI_API_KEY || 'NON DÉFINIE';
+        document.getElementById('apiKeyDisplay').textContent = apiKey.substring(0, 20) + '...' + apiKey.substring(apiKey.length - 10);
+
+        function displayResult(text, isError = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = isError ? 'error' : 'success';
+            resultDiv.textContent = text;
+        }
+
+        async function testListModels() {
+            displayResult('Test en cours...');
+            try {
+                const response = await fetch('https://api.openai.com/v1/models', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResult(`✅ SUCCÈS!\n\nNombre de modèles: ${data.data.length}\n\nQuelques modèles disponibles:\n${data.data.slice(0, 10).map(m => '- ' + m.id).join('\n')}`);
+                } else {
+                    displayResult(`❌ ERREUR\n\nStatus: ${response.status}\nMessage: ${data.error?.message || 'Inconnue'}`, true);
+                }
+            } catch (error) {
+                displayResult(`❌ ERREUR FETCH\n\n${error.message}\n\nCela signifie probablement:\n- Problème de connexion internet\n- Blocage CORS (peu probable pour OpenAI)\n- Firewall/Antivirus qui bloque`, true);
+            }
+        }
+
+        async function testDallE2() {
+            displayResult('Test DALL-E 2 en cours...');
+            try {
+                const response = await fetch('https://api.openai.com/v1/images/generations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'dall-e-2',
+                        prompt: 'A simple blue circle on white background',
+                        n: 1,
+                        size: '1024x1024'
+                        // PAS de quality pour DALL-E 2
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResult(`✅ DALL-E 2 FONCTIONNE!\n\nURL de l'image:\n${data.data[0].url}`);
+                } else {
+                    displayResult(`❌ ERREUR DALL-E 2\n\nStatus: ${response.status}\nMessage: ${data.error?.message || 'Inconnue'}\n\nDétails complets:\n${JSON.stringify(data, null, 2)}`, true);
+                }
+            } catch (error) {
+                displayResult(`❌ ERREUR FETCH DALL-E 2\n\n${error.message}`, true);
+            }
+        }
+
+        async function testDallE3() {
+            displayResult('Test DALL-E 3 en cours...');
+            try {
+                const response = await fetch('https://api.openai.com/v1/images/generations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'dall-e-3',
+                        prompt: 'A simple blue circle on white background',
+                        n: 1,
+                        size: '1024x1024',
+                        quality: 'standard' // ou 'hd'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResult(`✅ DALL-E 3 FONCTIONNE!\n\nURL de l'image:\n${data.data[0].url}\n\nPrompt révisé par DALL-E 3:\n${data.data[0].revised_prompt || 'N/A'}`);
+                } else {
+                    displayResult(`❌ ERREUR DALL-E 3\n\nStatus: ${response.status}\nMessage: ${data.error?.message || 'Inconnue'}\n\nDétails complets:\n${JSON.stringify(data, null, 2)}`, true);
+                }
+            } catch (error) {
+                displayResult(`❌ ERREUR FETCH DALL-E 3\n\n${error.message}`, true);
+            }
+        }
+
+        async function testChatGPT() {
+            displayResult('Test ChatGPT en cours...');
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o',
+                        messages: [
+                            { role: 'user', content: 'Dis juste "Bonjour, je fonctionne!"' }
+                        ],
+                        max_tokens: 50
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResult(`✅ CHATGPT FONCTIONNE!\n\nRéponse:\n${data.choices[0].message.content}`);
+                } else {
+                    displayResult(`❌ ERREUR CHATGPT\n\nStatus: ${response.status}\nMessage: ${data.error?.message || 'Inconnue'}\n\nDétails:\n${JSON.stringify(data, null, 2)}`, true);
+                }
+            } catch (error) {
+                displayResult(`❌ ERREUR FETCH CHATGPT\n\n${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html>

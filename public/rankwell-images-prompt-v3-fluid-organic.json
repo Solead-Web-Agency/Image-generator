@@ -1,0 +1,198 @@
+{
+  "project_name": "Rankwell - Images Expertises V3",
+  "version": "3.0 - Fluid Organic & Abstract Gradients",
+  "style_global": {
+    "aesthetic": "Formes organiques fluides, gradient mesh abstrait, mouvement naturel, composition artistique moderne",
+    "color_palette": [
+      "#0066FF",
+      "#00E5FF",
+      "#6366F1",
+      "#8B5CF6",
+      "#EC4899",
+      "#F59E0B",
+      "#10B981"
+    ],
+    "mood": "Fluide, organique, artistique, dynamique, moderne, créatif, harmonieux",
+    "lighting": "Soft ambient glow, color blending, luminous gradients, ethereal atmosphere",
+    "composition": "Organic flowing shapes, asymmetric balance, dynamic movement, abstract narrative",
+    "dimensions": "1200x800px, landscape orientation, 3:2 aspect ratio",
+    "output_format": "High-resolution PNG with transparency support",
+    "key_effects": [
+      "Gradient mesh fluide (organic blends)",
+      "Formes abstraites liquides",
+      "Blurs artistiques et soft focus",
+      "Color bleeding effects",
+      "Wavy distortions subtiles",
+      "Depth through color layering"
+    ]
+  },
+  "brand_identity": {
+    "name": "Rankwell",
+    "industry": "Digital Marketing Agency - SEO, SEA, Data Analytics",
+    "positioning": "Business centrix approach, GEO native, performance-driven",
+    "visual_language": "Fluide, créatif, moderne, artistique avec fondation professionnelle"
+  },
+  "images": [
+    {
+      "id": "image_01_geo_seo_fluid",
+      "section": "Expertises - GEO & SEO",
+      "context": "Service GEO & SEO avec approche artistique et fluide représentant l'évolution du search",
+      "prompt_principal": "Abstract fluid art illustration of search evolution. Center: organic flowing shape morphing from traditional search (represented by a simple elegant search icon) into AI-powered neural waves (fluid ribbons and organic forms). Left side: smooth gradient blob in electric blue (#0066FF) with subtle upward-flowing lines suggesting ranking growth. Right side: fluid gradient mesh in cyan (#00E5FF) to purple (#8B5CF6) with abstract neural network patterns dissolved into organic shapes. Background: soft white base with colorful gradient clouds (blue, cyan, purple) blending seamlessly. Floating abstract elements: content particles, link connections as organic tendrils, data streams as liquid flows. Style: modern abstract gradient art, fluid shapes, organic composition, artistic data visualization, dreamy atmosphere with professional foundation",
+      "elements_cles": [
+        "Forme centrale fluide qui se transforme (métamorphose)",
+        "Icône search simple et élégante intégrée organiquement",
+        "Vagues et rubans fluides représentant l'IA",
+        "Blobs de gradient bleu électrique (#0066FF)",
+        "Gradient mesh cyan → violet avec motifs organiques",
+        "Lignes fluides montantes (croissance SEO)",
+        "Particules de contenu flottantes abstraites",
+        "Tendrilles organiques pour les liens (netlinking)",
+        "Background blanc avec nuages de couleur gradient",
+        "Atmosphère onirique mais professionnelle"
+      ],
+      "avoid": "Formes géométriques dures, lignes droites rigides, compositions symétriques, style corporate strict",
+      "technical_specs": {
+        "style": "Fluid gradient art, organic abstract, modern artistic visualization",
+        "dominant_colors": ["#0066FF", "#00E5FF", "#8B5CF6", "#FFFFFF"],
+        "focal_point": "Forme fluide centrale en métamorphose",
+        "flow_direction": "Left to right (traditional search → AI-powered)"
+      }
+    },
+    {
+      "id": "image_02_sea_fluid",
+      "section": "Expertises - SEA",
+      "context": "Service SEA avec représentation fluide de la performance et du ROI",
+      "prompt_principal": "Dynamic fluid abstract of advertising performance flow. Center: large organic wave shape flowing upward, gradient from indigo (#6366F1) through electric blue (#00E5FF) to success green (#10B981), suggesting ROI growth. Embedded within the wave: abstract euro symbols (€) and conversion icons flowing naturally like particles in a stream. Left side: fluid blob representing ad campaigns with pulse-like ripples. Right side: target/bullseye element integrated organically with liquid shapes converging toward it. Foreground: floating organic shapes showing abstract metrics (CPC, ROI) rendered as liquid badges or flowing ribbons. Background: soft white with gradient clouds in blue, purple, and warm orange (#F59E0B) tones. Style: fluid gradient art meets performance visualization, organic data streams, liquid motion aesthetic, artistic but purposeful, dynamic energy",
+      "elements_cles": [
+        "Grande vague organique montante (croissance)",
+        "Gradient fluide indigo → cyan → vert (progression vers succès)",
+        "Symboles € intégrés dans le flux comme des particules",
+        "Icônes de conversion flottant organiquement",
+        "Blob fluide avec ondulations de pulse (campagnes actives)",
+        "Cible avec formes liquides convergeant vers elle",
+        "Badges liquides ou rubans pour métriques (CPC, ROI, CTR)",
+        "Flux de données visualisés comme des streams liquides",
+        "Background blanc avec nuages gradient bleu/violet/orange",
+        "Énergie dynamique et mouvement ascendant"
+      ],
+      "avoid": "Dashboard strict, graphiques traditionnels, formes rigides, composition statique",
+      "technical_specs": {
+        "style": "Fluid motion graphics, liquid gradient art, organic performance viz",
+        "dominant_colors": ["#6366F1", "#00E5FF", "#10B981", "#F59E0B"],
+        "focal_point": "Vague montante avec gradient de succès",
+        "flow_direction": "Upward and converging (growth toward target)"
+      }
+    },
+    {
+      "id": "image_03_data_analytics_fluid",
+      "section": "Expertises - Data & Analytics",
+      "context": "Service Data avec visualisation fluide et organique des insights",
+      "prompt_principal": "Sophisticated fluid abstract of data transformation. Center: large ethereal sphere or organic blob made of flowing gradient mesh (purple #8B5CF6 to cyan #00E5FF to pink #EC4899), with abstract data streams flowing through it like colored rivers. The sphere appears to be processing and transforming information. Left side: tracking elements represented as small organic nodes with liquid connections. Right side: A/B test visualization as two fluid shapes interacting, blending, competing. Bottom: conversion funnel rendered as flowing liquid narrowing and brightening (purple to bright green #10B981). Scattered throughout: abstract chart elements (curves, peaks) integrated as organic lines within the fluid composition. Background: pristine white with soft gradient clouds (purple, cyan, pink). Style: ethereal fluid data art, organic analytics visualization, liquid information flow, artistic interpretation of data science, dreamy yet intelligent atmosphere",
+      "elements_cles": [
+        "Sphère ou blob central éthéré en gradient mesh",
+        "Gradient fluide violet → cyan → rose",
+        "Flux de données comme des rivières colorées traversant la sphère",
+        "Nœuds organiques pour le tracking avec connexions liquides",
+        "Deux formes fluides interagissant (A/B test)",
+        "Entonnoir de conversion en flux liquide (violet → vert)",
+        "Éléments de graphiques abstraits (courbes, pics) intégrés organiquement",
+        "Points de données comme des particules lumineuses",
+        "Transformations visuelles de l'information",
+        "Background blanc avec nuages gradient violet/cyan/rose",
+        "Atmosphère éthérée et intelligente"
+      ],
+      "avoid": "Graphiques statiques, dashboards classiques, grilles rigides, composition technique stricte",
+      "technical_specs": {
+        "style": "Ethereal fluid art, organic data visualization, liquid gradient mesh",
+        "dominant_colors": ["#8B5CF6", "#00E5FF", "#EC4899", "#10B981"],
+        "focal_point": "Sphère centrale avec flux de données",
+        "flow_direction": "Multi-directional flows converging and transforming"
+      }
+    }
+  ],
+  "instructions_generation": {
+    "workflow": [
+      "1. Privilégier les formes organiques et les transitions fluides",
+      "2. Utiliser des gradient mesh complexes avec plusieurs couleurs",
+      "3. Créer un sentiment de mouvement et de transformation",
+      "4. Éviter les lignes dures et les angles vifs",
+      "5. Intégrer les éléments conceptuels naturellement dans la composition fluide",
+      "6. Maintenir une base professionnelle malgré l'aspect artistique"
+    ],
+    "fluid_art_guide": {
+      "shapes": "Blobs, vagues, rubans, tendrilles, nuages, sphères déformées",
+      "transitions": "Smooth color bleeding, gradient mesh, soft blending",
+      "movement": "Flowing, transforming, converging, ascending",
+      "colors": "Multi-color gradients avec 3-5 couleurs par élément",
+      "atmosphere": "Dreamy mais avec intention claire et message business"
+    },
+    "quality_checks": [
+      "Les formes sont organiques et fluides",
+      "Les gradients sont riches et complexes",
+      "Le mouvement est apparent et directionnel",
+      "Le message de chaque expertise reste clair",
+      "Le style est artistique mais reste professionnel",
+      "Les 3 images forment une série cohérente"
+    ]
+  },
+  "color_usage": {
+    "blue_electric": "#0066FF - Base brand, confiance, stabilité",
+    "cyan": "#00E5FF - Innovation, modernité, fraîcheur",
+    "indigo": "#6366F1 - Profondeur, sophistication",
+    "purple": "#8B5CF6 - Créativité, transformation",
+    "pink": "#EC4899 - Énergie, dynamisme, touche créative",
+    "orange": "#F59E0B - Performance, succès, warmth",
+    "green": "#10B981 - Croissance, succès, conversions"
+  },
+  "inspiration_references": {
+    "style": "Fluid gradient art, abstract data art, modern motion graphics, liquid compositions",
+    "artists": "Klarens Malluta (fluid gradients), Pawel Nolbert (abstract 3D), Peter Tarka (colorful blobs)",
+    "examples": [
+      "Spotify wrapped visual style",
+      "Apple WWDC abstract backgrounds",
+      "Modern motion design studios",
+      "Behance fluid gradient projects"
+    ]
+  },
+  "naming_convention": {
+    "format": "rankwell-[section]-fluid-[resolution].png",
+    "examples": [
+      "rankwell-geo-seo-fluid-1200x800.png",
+      "rankwell-sea-fluid-1200x800.png",
+      "rankwell-data-analytics-fluid-1200x800.png"
+    ]
+  },
+  "comparison_with_other_versions": {
+    "version_1_3d": {
+      "style": "3D isométrique structuré",
+      "mood": "Tech-forward, précis",
+      "target": "Startups tech"
+    },
+    "version_2_glass": {
+      "style": "Glassmorphism minimal",
+      "mood": "Premium, sobre",
+      "target": "Corporate haut de gamme"
+    },
+    "version_3_fluid": {
+      "style": "Gradient fluide organique",
+      "mood": "Créatif, dynamique, artistique",
+      "target": "Marques modernes, creative-forward companies"
+    },
+    "recommendation": "La Version 3 convient aux entreprises qui veulent montrer leur côté créatif et innovant tout en restant professionnelles. Parfait pour se démarquer avec une identité visuelle forte et mémorable."
+  },
+  "unique_selling_points_v3": {
+    "differentiation": "Style fluide rare dans le secteur des agences SEO/SEA, crée une identité visuelle distinctive",
+    "memorability": "Très forte - les compositions organiques colorées sont mémorables",
+    "modernity": "Ultra-moderne, suit les tendances design 2026",
+    "emotional_connection": "Les formes organiques créent une connexion émotionnelle positive",
+    "versatility": "Fonctionne bien en mouvement (animations possibles)",
+    "brand_personality": "Créative, innovante, humaine, dynamique, confiante"
+  },
+  "notes": {
+    "target_audience": "Marques modernes, e-commerce créatif, scale-ups ambitieuses, entreprises qui valorisent le design",
+    "brand_perception": "Innovante, créative, moderne, dynamique, humaine, différente",
+    "differentiation": "Se démarque fortement des agences marketing traditionnelles avec un style artistique unique",
+    "usage_context": "Ces images captent l'attention immédiatement et créent une identité visuelle distinctive pour Rankwell",
+    "animation_potential": "Ce style se prête parfaitement à des animations fluides si vous voulez animer le site plus tard"
+  }
+}

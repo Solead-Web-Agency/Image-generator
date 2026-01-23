@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur d'Images - Rankwell</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 Générateur d'Images Cohérentes</h1>
+            <p class="subtitle">Créez des images avec une Direction Artistique cohérente en changeant simplement le sujet</p>
+        </header>
+
+        <main>
+            <!-- Mode de travail -->
+            <section class="section">
+                <h2>Mode de travail</h2>
+                <div class="mode-selector">
+                    <button class="mode-btn active" data-mode="manual">
+                        <span class="mode-icon">✏️</span>
+                        <span class="mode-title">Création manuelle</span>
+                        <span class="mode-desc">Créez une image unique</span>
+                    </button>
+                    <button class="mode-btn" data-mode="scan">
+                        <span class="mode-icon">🔍</span>
+                        <span class="mode-title">Scanner une page</span>
+                        <span class="mode-desc">Analysez une page et générez plusieurs images</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Sélection du style (commun aux deux modes) -->
+            <section class="section">
+                <h2>Choisissez votre style visuel</h2>
+                <div class="style-grid">
+                    <div class="style-card" data-style="v1">
+                        <div class="style-preview v1-preview"></div>
+                        <h3>3D Isométrique</h3>
+                        <p>Moderne, tech-forward, gradients dynamiques</p>
+                        <span class="style-tag">V1 - Original</span>
+                    </div>
+                    <div class="style-card" data-style="v2">
+                        <div class="style-preview v2-preview"></div>
+                        <h3>Glassmorphism</h3>
+                        <p>Minimal, élégant, effets de verre</p>
+                        <span class="style-tag">V2 - Glass</span>
+                    </div>
+                    <div class="style-card" data-style="v3">
+                        <div class="style-preview v3-preview"></div>
+                        <h3>Fluid Organic</h3>
+                        <p>Formes fluides, gradients artistiques</p>
+                        <span class="style-tag">V3 - Fluid</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section Scanner de page -->
+            <section class="section" id="scanSection" style="display: none;">
+                <h2>Scanner une page web</h2>
+                <div class="scan-options">
+                    <div class="scan-option">
+                        <h3>Option 1 : URL de la page</h3>
+                        <input 
+                            type="url" 
+                            id="urlInput" 
+                            placeholder="https://exemple.com/page"
+                            class="url-input"
+                        >
+                        <button id="scanUrlBtn" class="btn-secondary">
+                            <span class="btn-icon">🔗</span>
+                            Scanner l'URL
+                        </button>
+                        <p class="help-text">⚠️ Peut ne pas fonctionner à cause des restrictions CORS</p>
+                    </div>
+                    
+                    <div class="scan-divider">OU</div>
+                    
+                    <div class="scan-option">
+                        <h3>Option 2 : Collez le HTML de la page</h3>
+                        <textarea 
+                            id="htmlInput" 
+                            placeholder="Collez le HTML de votre page ici..."
+                            rows="6"
+                        ></textarea>
+                        <button id="scanHtmlBtn" class="btn-secondary">
+                            <span class="btn-icon">📄</span>
+                            Analyser le HTML
+                        </button>
+                        <p class="help-text">Conseil : Faites un clic droit sur la page → "Afficher le code source" → Copiez tout</p>
+                    </div>
+                </div>
+
+                <!-- Résultats du scan -->
+                <div id="scanResults" style="display: none; margin-top: 2rem;">
+                    <h3>Sections détectées</h3>
+                    <div id="sectionsFound"></div>
+                    
+                    <button id="analyzeWithAIBtn" class="btn-primary" style="margin-top: 1rem;">
+                        <span class="btn-icon">🤖</span>
+                        Analyser avec l'IA et suggérer des images
+                    </button>
+                </div>
+
+                <!-- Suggestions d'images -->
+                <div id="imageSuggestions" style="display: none; margin-top: 2rem;">
+                    <h3>Images suggérées par l'IA</h3>
+                    <div id="suggestionsContainer"></div>
+                    
+                    <div class="batch-actions" style="margin-top: 1.5rem;">
+                        <button id="generateAllBtn" class="btn-primary">
+                            <span class="btn-icon">🎨</span>
+                            Générer toutes les images sélectionnées
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section création manuelle -->
+            <div id="manualSection">
+            <!-- Sélection du template de base -->
+            <section class="section">
+                <h2>1. Template de référence (optionnel)</h2>
+                <select id="templateSelect" disabled>
+                    <option value="">Sélectionnez d'abord un style</option>
+                </select>
+                <p class="help-text">Choisissez un template existant pour en copier la structure</p>
+            </section>
+
+            <!-- Input du nouveau sujet -->
+            <section class="section">
+                <h2>2. Décrivez votre nouveau sujet</h2>
+                <textarea 
+                    id="subjectInput" 
+                    placeholder="Exemple: Un service de marketing automation avec des workflows intelligents et des campagnes personnalisées..."
+                    rows="4"
+                ></textarea>
+                <p class="help-text">Décrivez le sujet que vous souhaitez illustrer. L'IA va adapter le style choisi à votre sujet.</p>
+            </section>
+
+            <!-- Bouton de génération du prompt -->
+            <section class="section">
+                <button id="generatePromptBtn" class="btn-primary" disabled>
+                    <span class="btn-icon">✨</span>
+                    Générer le prompt optimisé
+                </button>
+            </section>
+
+            <!-- Affichage du prompt généré -->
+            <section class="section" id="promptSection" style="display: none;">
+                <h2>3. Prompt généré</h2>
+                <div class="prompt-display">
+                    <div class="prompt-header">
+                        <span class="prompt-label">Prompt pour génération d'image</span>
+                        <button id="copyPromptBtn" class="btn-secondary">
+                            <span class="btn-icon">📋</span>
+                            Copier
+                        </button>
+                    </div>
+                    <div id="generatedPrompt" class="prompt-content"></div>
+                </div>
+                <div class="prompt-actions">
+                    <button id="editPromptBtn" class="btn-secondary">
+                        <span class="btn-icon">✏️</span>
+                        Modifier le prompt
+                    </button>
+                    <button id="generateImageBtn" class="btn-primary">
+                        <span class="btn-icon">🖼️</span>
+                        Générer l'image avec DALL-E
+                    </button>
+                </div>
+            </section>
+
+            <!-- Configuration API (collapsible) -->
+            <section class="section config-section">
+                <details>
+                    <summary>⚙️ Configuration API OpenAI</summary>
+                    <div class="config-content">
+                        <label for="apiKeyInput">Clé API OpenAI:</label>
+                        <input 
+                            type="password" 
+                            id="apiKeyInput" 
+                            placeholder="sk-..." 
+                            autocomplete="off"
+                        >
+                        <p class="help-text">
+                            Votre clé API est stockée localement dans votre navigateur et n'est jamais envoyée ailleurs qu'à OpenAI.
+                            <a href="https://platform.openai.com/api-keys" target="_blank">Obtenir une clé API</a>
+                        </p>
+                        <div class="model-select">
+                            <label for="modelSelect">Modèle DALL-E:</label>
+                            <select id="modelSelect">
+                                <option value="dall-e-3">DALL-E 3 (meilleure qualité)</option>
+                                <option value="dall-e-2">DALL-E 2 (plus rapide)</option>
+                            </select>
+                        </div>
+                        <div class="size-select">
+                            <label for="sizeSelect">Taille de l'image:</label>
+                            <select id="sizeSelect">
+                                <option value="1024x1024">1024x1024 (Carré)</option>
+                                <option value="1792x1024">1792x1024 (Paysage - DALL-E 3 uniquement)</option>
+                                <option value="1024x1792">1024x1792 (Portrait - DALL-E 3 uniquement)</option>
+                            </select>
+                        </div>
+                        <div class="quality-select">
+                            <label for="qualitySelect">Qualité (DALL-E 3):</label>
+                            <select id="qualitySelect">
+                                <option value="standard">Standard (plus rapide)</option>
+                                <option value="hd">HD (meilleure qualité)</option>
+                            </select>
+                        </div>
+                    </div>
+                </details>
+            </section>
+
+            <!-- Résultat de génération -->
+            <section class="section" id="resultSection" style="display: none;">
+                <h2>4. Image générée</h2>
+                <div class="image-result">
+                    <img id="generatedImage" alt="Image générée">
+                    <div class="image-actions">
+                        <button id="downloadImageBtn" class="btn-primary">
+                            <span class="btn-icon">💾</span>
+                            Télécharger l'image
+                        </button>
+                        <button id="newGenerationBtn" class="btn-secondary">
+                            <span class="btn-icon">🔄</span>
+                            Nouvelle génération
+                        </button>
+                    </div>
+                </div>
+            </section>
+            </div> <!-- Fin manualSection -->
+
+            <!-- Historique des images générées -->
+            <section class="section">
+                <details>
+                    <summary>📚 Historique des images générées (<span id="historyCount">0</span>)</summary>
+                    <div class="history-content">
+                        <div class="history-header">
+                            <button id="refreshHistoryBtn" class="btn-secondary">
+                                <span class="btn-icon">🔄</span>
+                                Actualiser
+                            </button>
+                            <button id="exportHistoryBtn" class="btn-secondary">
+                                <span class="btn-icon">📥</span>
+                                Exporter l'historique
+                            </button>
+                            <button id="clearHistoryBtn" class="btn-secondary">
+                                <span class="btn-icon">🗑️</span>
+                                Vider l'historique
+                            </button>
+                        </div>
+                        <div id="historyContainer" class="history-container">
+                            <p class="help-text">Aucune image générée pour le moment</p>
+                        </div>
+                    </div>
+                </details>
+            </section>
+
+            <!-- Loading et messages -->
+            <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+                <div class="spinner"></div>
+                <p id="loadingMessage">Génération en cours...</p>
+            </div>
+
+            <div id="messageBox" class="message-box" style="display: none;">
+                <span id="messageText"></span>
+            </div>
+        </main>
+
+        <footer>
+        </footer>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="api-client.js"></script>
+    <script src="prompts-data.js"></script>
+    <script src="prompt-generator.js"></script>
+    <script src="page-scanner.js"></script>
+    <script src="image-storage.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

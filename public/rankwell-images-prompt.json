@@ -1,0 +1,134 @@
+{
+  "project_name": "Rankwell - Images Expertises",
+  "style_global": {
+    "aesthetic": "Modern professional digital agency, clean and minimalist design, gradient accents, tech-forward",
+    "color_palette": [
+      "#0066FF",
+      "#00E5FF",
+      "#6366F1",
+      "#8B5CF6",
+      "#FFFFFF",
+      "#F8FAFC"
+    ],
+    "mood": "Professional, innovative, trustworthy, data-driven, future-oriented",
+    "lighting": "Soft ambient lighting with slight glow effects, modern studio setup",
+    "composition": "Centered subject with negative space, clean backgrounds, professional depth of field",
+    "dimensions": "1200x800px, landscape orientation, 3:2 aspect ratio",
+    "output_format": "High-resolution PNG with transparency support"
+  },
+  "brand_identity": {
+    "name": "Rankwell",
+    "industry": "Digital Marketing Agency - SEO, SEA, Data Analytics",
+    "positioning": "Business centrix approach, GEO native, performance-driven",
+    "visual_language": "Clean, modern, gradient-based, minimalist with tech elements"
+  },
+  "images": [
+    {
+      "id": "image_01_geo_seo",
+      "section": "Expertises - GEO & SEO",
+      "context": "Cette image accompagne la description du service GEO & SEO : référencement naturel pensé pour Google ET les moteurs génératifs (ChatGPT, Perplexity, Gemini). Audit technique, stratégie sémantique, netlinking, création de contenu.",
+      "prompt_principal": "Modern 3D illustration showing a sophisticated search ecosystem with multiple layers. Center: a glowing search bar with AI-powered particles and neural network connections. Left side: traditional Google logo or search icon with classic ranking bars and upward arrows. Right side: futuristic AI brain or holographic interface representing ChatGPT, Perplexity, Gemini. Background: subtle gradient from deep blue (#0066FF) to cyan (#00E5FF) with floating data points and connection nodes. Style: isometric perspective, clean vector art meets 3D render, professional tech aesthetic with soft shadows and ambient glow",
+      "elements_cles": [
+        "Search bar central lumineux avec effet de particules IA",
+        "Icônes moteurs de recherche traditionnels (Google) à gauche",
+        "Représentation d'IA générative (cerveau holographique ou réseau neuronal) à droite",
+        "Graphiques de croissance SEO (courbes ascendantes, barres de ranking)",
+        "Éléments de contenu flottants (texte structuré, backlinks stylisés)",
+        "Gradient bleu profond vers cyan avec effets de transparence"
+      ],
+      "avoid": "Clipart, stock photos génériques, visages humains, texte illisible, éléments trop chargés",
+      "technical_specs": {
+        "style": "3D isometric illustration, gradient background, floating elements",
+        "dominant_colors": ["#0066FF", "#00E5FF", "#FFFFFF"],
+        "focal_point": "Search bar central avec rayonnement lumineux",
+        "depth": "Multiple layers avec effet de profondeur, ombres portées subtiles"
+      }
+    },
+    {
+      "id": "image_02_sea",
+      "section": "Expertises - SEA",
+      "context": "Cette image accompagne la description du service SEA : Google Ads piloté par la performance. Set-up, optimisation continue, analyse sémantique. Chaque euro investi doit rapporter. Focus sur le ROI et la génération de business.",
+      "prompt_principal": "Dynamic 3D visualization of performance-driven advertising campaign. Center: stylized Google Ads interface with animated performance metrics rising upward. Prominent elements: glowing CPC/CPA indicators, conversion funnels with money flow visualization, bidding strategy icons. Left: ad campaign setup dashboard with toggle switches and optimization dials. Right: ROI graph showing exponential growth with euro symbols (€) flowing into a target. Background: gradient from indigo (#6366F1) to electric blue (#00E5FF) with geometric shapes and data streams. Style: modern dashboard aesthetic meets 3D infographic, clean lines, premium fintech visualization",
+      "elements_cles": [
+        "Interface Google Ads stylisée au centre (reconnaissable sans être une copie exacte)",
+        "Métriques de performance animées (CPC, CPA, CTR) avec chiffres montants",
+        "Entonnoir de conversion avec flux visuel de leads/ventes",
+        "Symboles € (euro) en mouvement vers une cible/objectif",
+        "Graphiques ROI en croissance exponentielle",
+        "Éléments de campagne publicitaire (ads, keywords en 3D)",
+        "Gradient indigo vers bleu électrique avec effets lumineux"
+      ],
+      "avoid": "Interface Google Ads réelle (copyright), visages, captures d'écran, éléments génériques",
+      "technical_specs": {
+        "style": "3D dashboard visualization, performance metrics, motion-implied graphics",
+        "dominant_colors": ["#6366F1", "#00E5FF", "#FFFFFF", "#10B981"],
+        "focal_point": "Métriques de performance avec mouvement ascendant",
+        "depth": "Layered dashboard avec éléments flottants en premier plan"
+      }
+    },
+    {
+      "id": "image_03_data_analytics",
+      "section": "Expertises - Data & Analytics",
+      "context": "Cette image accompagne la description du service Data & Analytics : tracking, analytics, CRO (Conversion Rate Optimization). On mesure ce qui compte, on optimise ce qui convertit. La data au service de la croissance, pas de dashboards inutiles.",
+      "prompt_principal": "Sophisticated 3D data visualization ecosystem showcasing actionable analytics. Center: large holographic data sphere with real-time analytics flowing through it, showing conversion paths and user journeys. Left: clean tracking setup with pixel/tag icons and data collection nodes. Right: CRO experimentation lab with A/B test visualization and optimization gears. Bottom: conversion funnel with optimized flow and growth indicators. Background: gradient from deep purple (#8B5CF6) to cyan (#00E5FF) with floating charts, graphs, and data nodes creating a constellation effect. Style: premium analytics platform aesthetic, clean data visualization, futuristic but professional",
+      "elements_cles": [
+        "Sphère de données holographique centrale avec flux en temps réel",
+        "Graphiques analytiques élégants (courbes, barres, heatmaps stylisées)",
+        "Entonnoir de conversion avec indicateurs d'optimisation",
+        "Icônes de tracking moderne (pixels, tags, cookies en 3D)",
+        "Tests A/B visualisés avec variantes et winner indicator",
+        "Métriques CRO (taux de conversion, objectifs, KPIs) en augmentation",
+        "Constellation de points de données interconnectés",
+        "Gradient violet profond vers cyan avec effets lumineux"
+      ],
+      "avoid": "Dashboards trop complexes, graphiques Excel basiques, screenshots d'outils, éléments confus",
+      "technical_specs": {
+        "style": "3D holographic data visualization, clean analytics aesthetic, constellation pattern",
+        "dominant_colors": ["#8B5CF6", "#00E5FF", "#FFFFFF", "#10B981"],
+        "focal_point": "Sphère de données centrale avec rayonnement",
+        "depth": "Multi-layered data ecosystem avec profondeur atmosphérique"
+      }
+    }
+  ],
+  "instructions_generation": {
+    "workflow": [
+      "1. Générer chaque image individuellement en suivant le prompt_principal",
+      "2. Respecter strictement le style_global et la palette de couleurs définie",
+      "3. S'assurer que les 3 images forment un ensemble cohérent visuellement",
+      "4. Privilégier la qualité et la clarté sur la complexité",
+      "5. Vérifier que chaque image communique clairement son expertise respective"
+    ],
+    "quality_checks": [
+      "Les 3 images ont une cohérence stylistique évidente",
+      "Les couleurs respectent la palette brand Rankwell",
+      "Chaque image est immédiatement compréhensible",
+      "Le style est professionnel et moderne (pas cartoon ni trop corporate)",
+      "Les éléments techniques sont stylisés et non réalistes",
+      "Aucun texte n'est présent dans les images (sauf si décoratif illisible)"
+    ]
+  },
+  "naming_convention": {
+    "format": "rankwell-[section]-[resolution].png",
+    "examples": [
+      "rankwell-geo-seo-1200x800.png",
+      "rankwell-sea-1200x800.png",
+      "rankwell-data-analytics-1200x800.png"
+    ]
+  },
+  "alternative_prompts": {
+    "if_3d_too_complex": {
+      "image_01_geo_seo": "Clean gradient illustration showing a central search ecosystem with Google and AI engine icons interconnected by glowing lines, upward trending graphs, and floating content elements. Modern flat design with depth, blue-cyan gradient background, minimalist tech aesthetic",
+      "image_02_sea": "Professional illustration of performance advertising dashboard with rising metrics, conversion funnel, euro symbols flowing to target, and growth charts. Gradient indigo to blue, modern fintech style, clean geometric shapes",
+      "image_03_data_analytics": "Elegant data visualization showing analytics sphere with conversion paths, tracking elements, A/B test icons, and optimization indicators. Purple-cyan gradient, constellation of data points, premium dashboard aesthetic"
+    },
+    "if_abstract_preferred": {
+      "description": "Si le client préfère des visuels plus abstraits et minimalistes, utiliser des formes géométriques simples, des gradients prononcés, et des icônes stylisées au lieu de scènes complexes. Maintenir la palette de couleurs et la cohérence visuelle."
+    }
+  },
+  "notes": {
+    "target_audience": "Entreprises B2B et e-commerce recherchant une agence digitale premium et orientée performance",
+    "brand_perception": "Innovante, experte, data-driven, orientée résultats business",
+    "differentiation": "L'intégration native du GEO (optimisation pour IA) dans l'approche SEO est un élément différenciateur clé à valoriser visuellement",
+    "usage_context": "Ces images seront affichées dans la section expertises du site web, elles doivent être compréhensibles rapidement et renforcer le positionnement premium de l'agence"
+  }
+}
