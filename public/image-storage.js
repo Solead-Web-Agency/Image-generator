@@ -39,6 +39,7 @@ class ImageStorage {
             timestamp: new Date().toISOString(),
             date: new Date().toLocaleDateString('fr-FR'),
             time: new Date().toLocaleTimeString('fr-FR'),
+            thumbnailUrl: imageData.imageUrl || imageData.thumbnailUrl, // Stocker l'URL de l'image
             ...imageData
         };
 
@@ -96,7 +97,7 @@ class ImageStorage {
     /**
      * Télécharger une image avec organisation par date
      */
-    async downloadImageOrganized(imageUrl, metadata) {
+    async downloadImageOrganized(imageUrl, metadata, serverPath = null) {
         // Créer un nom de fichier organisé
         const now = new Date();
         const dateFolder = now.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -146,15 +147,18 @@ class ImageStorage {
                 console.log('✅ Image téléchargée via lien direct');
             }
 
-            // Ajouter à l'historique (même si téléchargement CORS échoue)
+            // Ajouter à l'historique avec le chemin serveur si disponible
             this.addToHistory({
-                imageUrl: imageUrl,
+                imageUrl: serverPath || imageUrl, // Chemin serveur permanent ou URL OpenAI
+                originalUrl: imageUrl, // URL OpenAI originale
+                thumbnailUrl: serverPath || imageUrl,
                 filename: filename,
                 style: styleName,
                 subject: subject,
                 prompt: metadata.prompt,
                 model: metadata.model,
                 size: metadata.size,
+                quality: metadata.quality,
                 mode: metadata.mode || 'manual'
             });
 

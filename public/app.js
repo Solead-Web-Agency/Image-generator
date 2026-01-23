@@ -306,9 +306,33 @@ class ImageGeneratorApp {
             // Utiliser la fonction generateImage() améliorée
             this.generatedImageUrl = await this.generateImage(this.generatedPrompt);
 
+            // Sauvegarder automatiquement sur le serveur
+            const subject = this.subjectInput.value.trim() || 'image';
+            const metadata = {
+                style: this.selectedStyle,
+                subject: subject,
+                prompt: this.generatedPrompt,
+                model: this.modelSelect.value,
+                size: this.sizeSelect.value,
+                quality: this.qualitySelect?.value || 'standard',
+                mode: 'manual'
+            };
+
+            this.loadingMessage.textContent = 'Sauvegarde de l\'image...';
+            const saveResult = await APIClient.saveImage(this.generatedImageUrl, metadata);
+            
+            // Ajouter à l'historique avec le chemin local
+            imageStorage.addToHistory({
+                imageUrl: saveResult.path, // Chemin local permanent
+                originalUrl: this.generatedImageUrl, // URL OpenAI temporaire
+                filename: saveResult.filename,
+                ...metadata
+            });
+
             // Afficher l'image
             this.displayImage(this.generatedImageUrl);
-            this.showMessage('Image générée avec succès !', 'success');
+            this.showMessage('Image générée et sauvegardée !', 'success');
+            this.refreshHistory();
 
         } catch (error) {
             console.error('Error generating image:', error);
@@ -329,8 +353,7 @@ class ImageGeneratorApp {
     async handleDownloadImage() {
         try {
             const subject = this.subjectInput.value.trim() || 'image';
-            
-            await imageStorage.downloadImageOrganized(this.generatedImageUrl, {
+            const metadata = {
                 style: this.selectedStyle,
                 subject: subject,
                 prompt: this.generatedPrompt,
@@ -338,13 +361,22 @@ class ImageGeneratorApp {
                 size: this.sizeSelect.value,
                 quality: this.qualitySelect?.value || 'standard',
                 mode: 'manual'
-            });
+            };
 
-            this.showMessage('Image téléchargée et ajoutée à l\'historique !', 'success');
+            // 1. Sauvegarder sur le serveur
+            this.showLoading('Sauvegarde de l\'image sur le serveur...');
+            const saveResult = await APIClient.saveImage(this.generatedImageUrl, metadata);
+            
+            // 2. Télécharger localement
+            await imageStorage.downloadImageOrganized(this.generatedImageUrl, metadata, saveResult.path);
+
+            this.hideLoading();
+            this.showMessage('Image sauvegardée et téléchargée !', 'success');
             this.refreshHistory();
         } catch (error) {
             console.error('Error downloading image:', error);
-            this.showMessage('Erreur lors du téléchargement', 'error');
+            this.hideLoading();
+            this.showMessage('Erreur lors du téléchargement: ' + error.message, 'error');
         }
     }
 
@@ -555,25 +587,30 @@ class ImageGeneratorApp {
             const prompt = pageScanner.generatePromptForSuggestion(suggestion, this.selectedStyle);
             const imageUrl = await this.generateImage(prompt);
             
-            // Télécharger avec organisation (ne bloque pas en cas d'erreur CORS)
-            try {
-                await imageStorage.downloadImageOrganized(imageUrl, {
-                    style: this.selectedStyle,
-                    subject: suggestion.imageSubject,
-                    prompt: prompt,
-                    model: this.modelSelect.value,
-                    size: this.sizeSelect.value,
-                    quality: this.qualitySelect?.value || 'standard',
-                    mode: 'scan',
-                    section: suggestion.sectionTitle
-                });
-                this.showMessage('Image générée et ajoutée à l\'historique !', 'success');
-            } catch (downloadError) {
-                console.warn('Téléchargement automatique échoué, mais image générée:', downloadError);
-                this.showMessage('Image générée ! (Clic droit sur l\'URL dans la console pour télécharger)', 'success');
-                console.log('🖼️ URL de l\'image:', imageUrl);
-            }
+            const metadata = {
+                style: this.selectedStyle,
+                subject: suggestion.imageSubject,
+                prompt: prompt,
+                model: this.modelSelect.value,
+                size: this.sizeSelect.value,
+                quality: this.qualitySelect?.value || 'standard',
+                mode: 'scan',
+                section: suggestion.sectionTitle
+            };
+
+            // Sauvegarder sur le serveur
+            this.loadingMessage.textContent = 'Sauvegarde de l\'image...';
+            const saveResult = await APIClient.saveImage(imageUrl, metadata);
             
+            // Ajouter à l'historique
+            imageStorage.addToHistory({
+                imageUrl: saveResult.path,
+                originalUrl: imageUrl,
+                filename: saveResult.filename,
+                ...metadata
+            });
+            
+            this.showMessage('Image générée et sauvegardée !', 'success');
             this.refreshHistory();
         } catch (error) {
             console.error('Error generating single image:', error);
@@ -609,8 +646,7 @@ class ImageGeneratorApp {
                 const prompt = pageScanner.generatePromptForSuggestion(suggestion, this.selectedStyle);
                 const imageUrl = await this.generateImage(prompt);
                 
-                // Télécharger avec organisation
-                await imageStorage.downloadImageOrganized(imageUrl, {
+                const metadata = {
                     style: this.selectedStyle,
                     subject: suggestion.imageSubject,
                     prompt: prompt,
@@ -620,6 +656,18 @@ class ImageGeneratorApp {
                     mode: 'scan',
                     section: suggestion.sectionTitle,
                     batchIndex: i + 1
+                };
+
+                // Sauvegarder sur le serveur
+                this.loadingMessage.textContent = `Sauvegarde ${i + 1}/${selectedSuggestions.length}...`;
+                const saveResult = await APIClient.saveImage(imageUrl, metadata);
+                
+                // Ajouter à l'historique
+                imageStorage.addToHistory({
+                    imageUrl: saveResult.path,
+                    originalUrl: imageUrl,
+                    filename: saveResult.filename,
+                    ...metadata
                 });
                 
                 // Attendre un peu entre chaque génération pour éviter les rate limits
@@ -628,7 +676,7 @@ class ImageGeneratorApp {
                 }
             }
 
-            this.showMessage(`${selectedSuggestions.length} image(s) générée(s) et téléchargée(s) !`, 'success');
+            this.showMessage(`${selectedSuggestions.length} image(s) générée(s) et sauvegardées !`, 'success');
             this.refreshHistory();
         } catch (error) {
             console.error('Error generating all images:', error);
@@ -760,50 +808,119 @@ class ImageGeneratorApp {
             dateSection.appendChild(dateHeader);
 
             const imagesGrid = document.createElement('div');
-            imagesGrid.className = 'history-images-grid';
+            imagesGrid.className = 'history-gallery-grid';
 
             history[date].forEach(entry => {
                 const card = document.createElement('div');
-                card.className = 'history-image-card';
+                card.className = 'gallery-image-card';
+                
+                const imageUrl = entry.imageUrl || entry.thumbnailUrl;
                 
                 card.innerHTML = `
-                    <div class="history-image-info">
-                        <div class="history-time">${entry.time}</div>
-                        <div class="history-style-badge">${entry.style || 'N/A'}</div>
+                    <div class="gallery-image-wrapper">
+                        ${imageUrl ? `<img src="${imageUrl}" alt="${entry.subject}" class="gallery-image" loading="lazy">` : '<div class="gallery-no-image">❌ Image expirée</div>'}
+                        <div class="gallery-overlay">
+                            <button class="gallery-btn view-details-btn" data-id="${entry.id}" title="Voir les détails">
+                                👁️ Détails
+                            </button>
+                            <button class="gallery-btn download-btn" data-id="${entry.id}" title="Télécharger">
+                                💾 Télécharger
+                            </button>
+                        </div>
                     </div>
-                    <div class="history-subject">${entry.subject}</div>
-                    <div class="history-meta">
-                        <span>${entry.model || 'N/A'}</span> • <span>${entry.size || 'N/A'}</span>
-                    </div>
-                    <div class="history-actions">
-                        <button class="btn-icon-small view-prompt-btn" data-id="${entry.id}" title="Voir le prompt">
-                            👁️
-                        </button>
-                        <button class="btn-icon-small delete-entry-btn" data-id="${entry.id}" title="Supprimer">
-                            🗑️
-                        </button>
+                    <div class="gallery-info">
+                        <div class="gallery-subject">${entry.subject}</div>
+                        <div class="gallery-meta">
+                            <span class="gallery-time">${entry.time}</span>
+                            <span class="gallery-style-badge">${entry.style || 'N/A'}</span>
+                        </div>
                     </div>
                 `;
 
-                // Voir le prompt
-                card.querySelector('.view-prompt-btn').addEventListener('click', () => {
-                    alert(`Prompt :\n\n${entry.prompt || 'Non disponible'}`);
+                // Voir les détails (modal avec le prompt)
+                card.querySelector('.view-details-btn').addEventListener('click', () => {
+                    this.showImageDetails(entry);
                 });
 
-                // Supprimer l'entrée
-                card.querySelector('.delete-entry-btn').addEventListener('click', () => {
-                    if (confirm('Supprimer cette entrée de l\'historique ?')) {
-                        imageStorage.deleteEntry(entry.id);
-                        this.refreshHistory();
-                        this.showMessage('Entrée supprimée', 'success');
-                    }
-                });
+                // Télécharger l'image
+                const downloadBtn = card.querySelector('.download-btn');
+                if (imageUrl) {
+                    downloadBtn.addEventListener('click', () => {
+                        const a = document.createElement('a');
+                        a.href = imageUrl;
+                        a.download = entry.filename || `image-${entry.id}.png`;
+                        a.target = '_blank';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    });
+                } else {
+                    downloadBtn.disabled = true;
+                    downloadBtn.textContent = '❌ Expiré';
+                }
 
                 imagesGrid.appendChild(card);
             });
 
             dateSection.appendChild(imagesGrid);
             this.historyContainer.appendChild(dateSection);
+        });
+    }
+
+    showImageDetails(entry) {
+        // Créer une modal pour afficher les détails
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Détails de l'image</h3>
+                    <button class="modal-close">✕</button>
+                </div>
+                <div class="modal-body">
+                    ${entry.imageUrl ? `<img src="${entry.imageUrl}" alt="${entry.subject}" class="modal-image">` : ''}
+                    <div class="modal-info">
+                        <p><strong>Sujet :</strong> ${entry.subject}</p>
+                        <p><strong>Style :</strong> ${entry.style}</p>
+                        <p><strong>Modèle :</strong> ${entry.model} - ${entry.size}</p>
+                        <p><strong>Date :</strong> ${entry.date} à ${entry.time}</p>
+                        <p><strong>Mode :</strong> ${entry.mode === 'manual' ? 'Création manuelle' : 'Scanner de page'}</p>
+                    </div>
+                    <div class="modal-prompt">
+                        <strong>Prompt :</strong>
+                        <pre>${entry.prompt || 'Non disponible'}</pre>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-secondary delete-from-modal" data-id="${entry.id}">
+                            <span class="btn-icon">🗑️</span>
+                            Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Fermer la modal
+        modal.querySelector('.modal-close').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+
+        // Supprimer depuis la modal
+        modal.querySelector('.delete-from-modal').addEventListener('click', () => {
+            if (confirm('Supprimer cette image de l\'historique ?')) {
+                imageStorage.deleteEntry(entry.id);
+                document.body.removeChild(modal);
+                this.refreshHistory();
+                this.showMessage('Image supprimée', 'success');
+            }
         });
     }
 
