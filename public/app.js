@@ -23,6 +23,7 @@ class ImageGeneratorApp {
         this.modeButtons = document.querySelectorAll('.mode-btn');
         this.manualSection = document.getElementById('manualSection');
         this.scanSection = document.getElementById('scanSection');
+        this.csvSection = document.getElementById('csvSection');
         
         // Scan elements
         this.urlInput = document.getElementById('urlInput');
@@ -35,6 +36,23 @@ class ImageGeneratorApp {
         this.imageSuggestions = document.getElementById('imageSuggestions');
         this.suggestionsContainer = document.getElementById('suggestionsContainer');
         this.generateAllBtn = document.getElementById('generateAllBtn');
+        
+        // CSV elements
+        this.csvFileInput = document.getElementById('csvFileInput');
+        this.csvTextInput = document.getElementById('csvTextInput');
+        this.parseCSVBtn = document.getElementById('parseCSVBtn');
+        this.csvPreview = document.getElementById('csvPreview');
+        this.csvTable = document.getElementById('csvTable');
+        this.csvRowCount = document.getElementById('csvRowCount');
+        this.csvColCount = document.getElementById('csvColCount');
+        this.csvImgCount = document.getElementById('csvImgCount');
+        this.analyzeCSVBtn = document.getElementById('analyzeCSVBtn');
+        this.csvImageTasks = document.getElementById('csvImageTasks');
+        this.csvTasksContainer = document.getElementById('csvTasksContainer');
+        this.generateCSVImagesBtn = document.getElementById('generateCSVImagesBtn');
+        this.exportCSVBtn = document.getElementById('exportCSVBtn');
+        
+        this.csvTasks = [];
         
         // Style cards
         this.styleCards = document.querySelectorAll('.style-card');
@@ -88,6 +106,13 @@ class ImageGeneratorApp {
         this.scanHtmlBtn.addEventListener('click', () => this.handleScanHtml());
         this.analyzeWithAIBtn.addEventListener('click', () => this.handleAnalyzeWithAI());
         this.generateAllBtn.addEventListener('click', () => this.handleGenerateAll());
+        
+        // CSV buttons
+        this.csvFileInput.addEventListener('change', (e) => this.handleCSVFileUpload(e));
+        this.parseCSVBtn.addEventListener('click', () => this.handleParseCSV());
+        this.analyzeCSVBtn.addEventListener('click', () => this.handleAnalyzeCSV());
+        this.generateCSVImagesBtn.addEventListener('click', () => this.handleGenerateCSVImages());
+        this.exportCSVBtn.addEventListener('click', () => this.handleExportCSV());
         
         // Style selection
         this.styleCards.forEach(card => {
@@ -421,13 +446,9 @@ class ImageGeneratorApp {
         const mode = selectedBtn.dataset.mode;
 
         // Afficher la section appropriée
-        if (mode === 'manual') {
-            this.manualSection.style.display = 'block';
-            this.scanSection.style.display = 'none';
-        } else if (mode === 'scan') {
-            this.manualSection.style.display = 'none';
-            this.scanSection.style.display = 'block';
-        }
+        this.manualSection.style.display = mode === 'manual' ? 'block' : 'none';
+        this.scanSection.style.display = mode === 'scan' ? 'block' : 'none';
+        this.csvSection.style.display = mode === 'csv' ? 'block' : 'none';
     }
 
     async handleScanUrl() {
@@ -929,6 +950,249 @@ class ImageGeneratorApp {
             imageStorage.clearHistory();
             this.refreshHistory();
             this.showMessage('Historique vidé', 'success');
+        }
+    }
+
+    // ==================== FONCTIONS MODE CSV ====================
+
+    handleCSVFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.csvTextInput.value = e.target.result;
+            this.showMessage('Fichier chargé, cliquez sur "Analyser le CSV"', 'success');
+        };
+        reader.readAsText(file);
+    }
+
+    handleParseCSV() {
+        const csvText = this.csvTextInput.value.trim();
+        
+        if (!csvText) {
+            this.showMessage('Veuillez sélectionner un fichier ou coller du CSV', 'error');
+            return;
+        }
+
+        try {
+            const result = csvParser.parseCSV(csvText);
+            
+            // Afficher les stats
+            this.csvRowCount.textContent = result.data.length;
+            this.csvColCount.textContent = result.headers.length;
+            this.csvImgCount.textContent = result.imageColumns.length * result.data.length;
+
+            // Afficher le tableau
+            this.displayCSVTable(result);
+
+            this.csvPreview.style.display = 'block';
+            this.showMessage(`CSV analysé : ${result.data.length} lignes, ${result.imageColumns.length} colonne(s) image`, 'success');
+            
+        } catch (error) {
+            console.error('Error parsing CSV:', error);
+            this.showMessage(`Erreur: ${error.message}`, 'error');
+        }
+    }
+
+    displayCSVTable(result) {
+        let html = '<thead><tr>';
+        
+        // En-têtes avec highlight des colonnes images
+        result.headers.forEach((header, index) => {
+            const isImageCol = result.imageColumns.some(col => col.index === index);
+            html += `<th class="${isImageCol ? 'csv-img-col' : ''}">${header}</th>`;
+        });
+        
+        html += '</tr></thead><tbody>';
+
+        // Afficher les 5 premières lignes
+        result.data.slice(0, 5).forEach(row => {
+            html += '<tr>';
+            result.headers.forEach((header, index) => {
+                const isImageCol = result.imageColumns.some(col => col.index === index);
+                html += `<td class="${isImageCol ? 'csv-img-col' : ''}">${row[header] || ''}</td>`;
+            });
+            html += '</tr>';
+        });
+
+        if (result.data.length > 5) {
+            html += `<tr><td colspan="${result.headers.length}" class="csv-more">... et ${result.data.length - 5} lignes supplémentaires</td></tr>`;
+        }
+
+        html += '</tbody>';
+        this.csvTable.innerHTML = html;
+    }
+
+    async handleAnalyzeCSV() {
+        if (!this.dataLoaded) {
+            this.showMessage('Veuillez patienter, les données de style sont en cours de chargement...', 'error');
+            return;
+        }
+
+        if (!this.selectedStyle) {
+            this.showMessage('Veuillez d\'abord sélectionner un style visuel', 'error');
+            return;
+        }
+
+        if (!this.apiKey) {
+            this.showMessage('Clé API OpenAI requise', 'error');
+            return;
+        }
+
+        try {
+            this.showLoading('Analyse du CSV avec l\'IA...');
+            
+            this.csvTasks = await csvParser.analyzeAllRows(this.apiKey);
+            
+            this.displayCSVTasks(this.csvTasks);
+            
+            this.hideLoading();
+            this.csvImageTasks.style.display = 'block';
+            this.showMessage(`${this.csvTasks.length} sujets générés par l'IA`, 'success');
+            
+        } catch (error) {
+            console.error('Error analyzing CSV:', error);
+            this.hideLoading();
+            this.showMessage(`Erreur: ${error.message}`, 'error');
+        }
+    }
+
+    displayCSVTasks(tasks) {
+        this.csvTasksContainer.innerHTML = '';
+
+        tasks.forEach((task, index) => {
+            const card = document.createElement('div');
+            card.className = 'csv-task-card';
+            card.dataset.index = index;
+
+            const statusIcon = task.status === 'generated' ? '✅' : task.status === 'error' ? '❌' : '⏳';
+            
+            card.innerHTML = `
+                <div class="csv-task-header">
+                    <span class="csv-task-status">${statusIcon}</span>
+                    <span class="csv-task-title">Ligne ${task.rowIndex + 1} - ${task.imageColumn}</span>
+                </div>
+                <div class="csv-task-context">
+                    <strong>Contexte :</strong>
+                    <pre>${task.context || 'N/A'}</pre>
+                </div>
+                <div class="csv-task-subject">
+                    <strong>Sujet généré :</strong>
+                    <p>${task.subject}</p>
+                </div>
+                ${task.imageUrl ? `<img src="${task.imageUrl}" class="csv-task-preview">` : ''}
+            `;
+
+            this.csvTasksContainer.appendChild(card);
+        });
+    }
+
+    async handleGenerateCSVImages() {
+        if (!this.apiKey) {
+            this.showMessage('Clé API OpenAI requise', 'error');
+            return;
+        }
+
+        const tasksToGenerate = this.csvTasks.filter(t => t.status === 'ready');
+
+        if (tasksToGenerate.length === 0) {
+            this.showMessage('Aucune image à générer', 'error');
+            return;
+        }
+
+        try {
+            this.showLoading(`Génération de ${tasksToGenerate.length} images...`);
+
+            for (let i = 0; i < tasksToGenerate.length; i++) {
+                const task = tasksToGenerate[i];
+                this.loadingMessage.textContent = `Génération ${i + 1}/${tasksToGenerate.length}: Ligne ${task.rowIndex + 1}`;
+
+                try {
+                    // Générer le prompt
+                    promptGenerator.setStyle(this.selectedStyle);
+                    promptGenerator.setSubject(task.subject);
+                    const prompt = promptGenerator.generatePrompt();
+                    task.prompt = prompt;
+
+                    // Générer l'image
+                    const imageUrl = await this.generateImage(prompt);
+                    task.imageUrl = imageUrl;
+
+                    // Sauvegarder sur le serveur
+                    const metadata = {
+                        style: this.selectedStyle,
+                        subject: task.subject,
+                        prompt: prompt,
+                        model: this.modelSelect.value,
+                        size: this.sizeSelect.value,
+                        quality: this.qualitySelect?.value || 'standard',
+                        mode: 'csv',
+                        csvRow: task.rowIndex + 1,
+                        csvColumn: task.imageColumn
+                    };
+
+                    const saveResult = await APIClient.saveImage(imageUrl, metadata);
+                    task.serverPath = saveResult.path;
+                    task.status = 'generated';
+
+                    // Ajouter à l'historique
+                    imageStorage.addToHistory({
+                        imageUrl: saveResult.path,
+                        originalUrl: imageUrl,
+                        filename: saveResult.filename,
+                        ...metadata
+                    });
+
+                    // Rafraîchir l'affichage
+                    this.displayCSVTasks(this.csvTasks);
+
+                } catch (error) {
+                    console.error(`Error generating image for row ${task.rowIndex}:`, error);
+                    task.status = 'error';
+                    task.error = error.message;
+                }
+
+                // Pause entre chaque génération
+                if (i < tasksToGenerate.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+
+            this.hideLoading();
+            this.showMessage(`${tasksToGenerate.length} images générées !`, 'success');
+            this.refreshHistory();
+
+        } catch (error) {
+            console.error('Error generating CSV images:', error);
+            this.hideLoading();
+            this.showMessage(`Erreur: ${error.message}`, 'error');
+        }
+    }
+
+    handleExportCSV() {
+        if (this.csvTasks.length === 0) {
+            this.showMessage('Aucune donnée à exporter', 'error');
+            return;
+        }
+
+        try {
+            const csv = csvParser.exportResultsCSV(this.csvTasks);
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `images-generated-${Date.now()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            this.showMessage('CSV exporté avec les URLs des images', 'success');
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+            this.showMessage(`Erreur: ${error.message}`, 'error');
         }
     }
 }

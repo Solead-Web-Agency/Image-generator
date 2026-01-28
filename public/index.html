@@ -9,14 +9,14 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎨 Générateur d'Images Cohérentes</h1>
-            <p class="subtitle">Créez des images avec une Direction Artistique cohérente en changeant simplement le sujet</p>
+            <h1>Images Generator</h1>
+            <p class="subtitle">Créez des images avec une direction artistique cohérente en changeant simplement le sujet</p>
         </header>
 
         <main>
             <!-- Mode de travail -->
             <section class="section">
-                <h2>Mode de travail</h2>
+                <h2>Step 1 : Mode de travail</h2>
                 <div class="mode-selector">
                     <button class="mode-btn active" data-mode="manual">
                         <span class="mode-icon">✏️</span>
@@ -28,12 +28,17 @@
                         <span class="mode-title">Scanner une page</span>
                         <span class="mode-desc">Analysez une page et générez plusieurs images</span>
                     </button>
+                    <button class="mode-btn" data-mode="csv">
+                        <span class="mode-icon">📊</span>
+                        <span class="mode-title">Import CSV</span>
+                        <span class="mode-desc">Générez des images depuis un fichier CSV</span>
+                    </button>
                 </div>
             </section>
 
             <!-- Sélection du style (commun aux deux modes) -->
             <section class="section">
-                <h2>Choisissez votre style visuel</h2>
+                <h2>Step 2 : Choisissez votre style visuel</h2>
                 <div class="style-grid">
                     <div class="style-card" data-style="v1">
                         <div class="style-preview v1-preview"></div>
@@ -56,9 +61,77 @@
                 </div>
             </section>
 
+            <!-- Section Import CSV -->
+            <section class="section" id="csvSection" style="display: none;">
+                <h2>Import CSV pour génération d'images</h2>
+                
+                <div class="csv-instructions">
+                    <h3>📋 Instructions</h3>
+                    <ul>
+                        <li>Votre CSV doit contenir au moins une colonne avec "img" dans le nom (ex: <code>img_produit</code>, <code>image</code>, <code>img1</code>)</li>
+                        <li>Les colonnes <strong>avant</strong> la colonne image seront utilisées comme contexte</li>
+                        <li>L'IA analysera le contexte pour générer un sujet d'image pertinent</li>
+                    </ul>
+                    
+                    <details>
+                        <summary>💡 Exemple de CSV</summary>
+                        <pre class="csv-example">Produit,Description,img_produit,Catégorie,Prix
+Nike Air Max,Chaussures de sport noires et blanches,[à générer],Sport,120€
+MacBook Pro,Ordinateur portable 16 pouces,[à générer],Tech,2500€</pre>
+                    </details>
+                </div>
+
+                <div class="csv-upload">
+                    <label for="csvFileInput" class="csv-upload-label">
+                        <span class="csv-upload-icon">📁</span>
+                        <span>Cliquez pour sélectionner un fichier CSV</span>
+                        <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                    </label>
+                    <p class="help-text">ou collez votre CSV ci-dessous</p>
+                    <textarea id="csvTextInput" placeholder="Collez votre CSV ici..." rows="8"></textarea>
+                    <button id="parseCSVBtn" class="btn-primary">
+                        <span class="btn-icon">📊</span>
+                        Analyser le CSV
+                    </button>
+                </div>
+
+                <!-- Aperçu du CSV -->
+                <div id="csvPreview" style="display: none; margin-top: 2rem;">
+                    <h3>Aperçu du CSV</h3>
+                    <div class="csv-stats">
+                        <span class="csv-stat"><strong id="csvRowCount">0</strong> lignes</span>
+                        <span class="csv-stat"><strong id="csvColCount">0</strong> colonnes</span>
+                        <span class="csv-stat"><strong id="csvImgCount">0</strong> image(s) à générer</span>
+                    </div>
+                    <div class="csv-table-wrapper">
+                        <table id="csvTable" class="csv-table"></table>
+                    </div>
+                    <button id="analyzeCSVBtn" class="btn-primary" style="margin-top: 1rem;">
+                        <span class="btn-icon">🤖</span>
+                        Analyser et préparer les images
+                    </button>
+                </div>
+
+                <!-- Liste des images à générer -->
+                <div id="csvImageTasks" style="display: none; margin-top: 2rem;">
+                    <h3>Images à générer</h3>
+                    <div id="csvTasksContainer"></div>
+                    <div class="csv-actions" style="margin-top: 1.5rem;">
+                        <button id="generateCSVImagesBtn" class="btn-primary">
+                            <span class="btn-icon">🎨</span>
+                            Générer toutes les images
+                        </button>
+                        <button id="exportCSVBtn" class="btn-secondary">
+                            <span class="btn-icon">📥</span>
+                            Exporter CSV avec URLs
+                        </button>
+                    </div>
+                </div>
+            </section>
+
             <!-- Section Scanner de page -->
             <section class="section" id="scanSection" style="display: none;">
-                <h2>Scanner une page web</h2>
+                <h2>Step 3 : Scanner une page web</h2>
                 <div class="scan-options">
                     <div class="scan-option">
                         <h3>Option 1 : URL de la page</h3>
@@ -121,7 +194,7 @@
             <div id="manualSection">
             <!-- Sélection du template de base -->
             <section class="section">
-                <h2>1. Template de référence (optionnel)</h2>
+                <h2>Step 4 : Template de référence (optionnel)</h2>
                 <select id="templateSelect" disabled>
                     <option value="">Sélectionnez d'abord un style</option>
                 </select>
@@ -130,7 +203,7 @@
 
             <!-- Input du nouveau sujet -->
             <section class="section">
-                <h2>2. Décrivez votre nouveau sujet</h2>
+                <h2>Step 5 : Décrivez votre nouveau sujet</h2>
                 <textarea 
                     id="subjectInput" 
                     placeholder="Exemple: Un service de marketing automation avec des workflows intelligents et des campagnes personnalisées..."
@@ -149,7 +222,7 @@
 
             <!-- Affichage du prompt généré -->
             <section class="section" id="promptSection" style="display: none;">
-                <h2>3. Prompt généré</h2>
+                <h2>Step 6 : Prompt généré</h2>
                 <div class="prompt-display">
                     <div class="prompt-header">
                         <span class="prompt-label">Prompt pour génération d'image</span>
@@ -216,7 +289,7 @@
 
             <!-- Résultat de génération -->
             <section class="section" id="resultSection" style="display: none;">
-                <h2>4. Image générée</h2>
+                    <h2>Step 7 : Image générée</h2>
                 <div class="image-result">
                     <img id="generatedImage" alt="Image générée">
                     <div class="image-actions">
@@ -279,6 +352,7 @@
     <script src="prompts-data.js"></script>
     <script src="prompt-generator.js"></script>
     <script src="page-scanner.js"></script>
+    <script src="csv-parser.js"></script>
     <script src="image-storage.js"></script>
     <script src="app.js"></script>
 </body>
