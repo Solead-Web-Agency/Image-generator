@@ -1,15 +1,9 @@
 /**
  * API: Analyser le style d'un site web
  * 
- * Cette API utilise Puppeteer pour scraper un site et extraire :
- * - Couleurs dominantes
- * - Typographies
- * - Esthétique générale
- * - Style de composition
+ * Version optimisée pour Vercel sans Puppeteer
+ * Utilise fetch + GPT-4o pour analyser le HTML/CSS
  */
-
-// Pour installer les dépendances nécessaires :
-// npm install puppeteer-core @sparticuz/chromium node-fetch
 
 const fetch = require('node-fetch');
 
@@ -34,81 +28,32 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // MÉTHODE 1 : Puppeteer avec Chromium pour Vercel
-        const puppeteer = require('puppeteer-core');
-        const chromium = require('@sparticuz/chromium');
+        console.log('🌐 Fetching HTML from:', url);
         
-        console.log('🚀 Launching Puppeteer for:', url);
-        
-        const browser = await puppeteer.launch({
-            args: chromium.args,
-            defaultViewport: chromium.defaultViewport,
-            executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
+        // Fetch le HTML du site
+        const response = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            },
+            timeout: 10000
         });
-        
-        const page = await browser.newPage();
-        console.log('📄 Navigating to URL...');
-        
-        await page.goto(url, { 
-            waitUntil: 'networkidle2', 
-            timeout: 30000 
-        });
-        
-        console.log('🎨 Extracting styles...');
-        
-        // Extraire les styles
-        const styleData = await page.evaluate(() => {
-            const body = document.body;
-            const computedStyle = getComputedStyle(body);
-            
-            // Couleurs
-            const colors = new Set();
-            const elements = document.querySelectorAll('*');
-            let count = 0;
-            
-            for (const el of elements) {
-                if (count++ > 200) break; // Limiter pour performance
-                
-                const style = getComputedStyle(el);
-                if (style.backgroundColor && style.backgroundColor !== 'rgba(0, 0, 0, 0)') {
-                    colors.add(style.backgroundColor);
-                }
-                if (style.color) {
-                    colors.add(style.color);
-                }
-            }
-            
-            // Fonts
-            const fonts = new Set();
-            count = 0;
-            
-            for (const el of elements) {
-                if (count++ > 100) break; // Limiter pour performance
-                
-                const font = getComputedStyle(el).fontFamily;
-                if (font) {
-                    const firstFont = font.split(',')[0].replace(/['"]/g, '').trim();
-                    if (firstFont) fonts.add(firstFont);
-                }
-            }
-            
-            return {
-                backgroundColor: computedStyle.backgroundColor,
-                textColor: computedStyle.color,
-                fontFamily: computedStyle.fontFamily,
-                allColors: Array.from(colors).slice(0, 10),
-                allFonts: Array.from(fonts).slice(0, 5)
-            };
-        });
-        
-        console.log('✅ Styles extracted:', styleData);
-        
-        await browser.close();
 
+        if (!response.ok) {
+            throw new Error(`Failed to fetch URL: ${response.status}`);
+        }
+
+        const html = await response.text();
+        
+        console.log('📄 HTML fetched, length:', html.length);
+
+        // Extraire les informations basiques du HTML
+        const styleInfo = extractStyleFromHTML(html);
+        
+        console.log('🎨 Basic styles extracted:', styleInfo);
+
+        // Analyser avec GPT-4o
         console.log('🤖 Analyzing with GPT-4...');
         
-        // Utiliser GPT-4 pour analyser et générer une description
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -119,60 +64,109 @@ module.exports = async (req, res) => {
                 model: 'gpt-4o-mini',
                 messages: [{
                     role: 'system',
-                    content: 'Tu es un expert en design qui analyse les styles de sites web.'
+                    content: 'Tu es un expert en design web. Analyse le code HTML/CSS fourni et déduis le style visuel du site.'
                 }, {
                     role: 'user',
-                    content: `Analyse ce site (${url}) avec ces données:
-Couleurs: ${styleData.allColors.join(', ')}
-Fonts: ${styleData.allFonts.join(', ')}
+                    content: `Analyse ce site web (${url}) et son code HTML/CSS.
 
-Génère une description du style en format JSON avec:
-- aesthetic: string (ex: "modern, minimal, tech-forward")
-- mood: string (ex: "professional, trustworthy")
-- composition: string (ex: "centered, clean backgrounds")
-- colorPalette: array de max 6 couleurs en hex`
+Informations extraites:
+- Couleurs détectées: ${JSON.stringify(styleInfo.colors)}
+- Fonts détectées: ${JSON.stringify(styleInfo.fonts)}
+- CSS inline/style tags: ${styleInfo.cssSnippet}
+
+Extrait du HTML (premiers 3000 caractères):
+${html.substring(0, 3000)}
+
+Réponds UNIQUEMENT avec un JSON valide (sans markdown) contenant:
+{
+  "aesthetic": "description du style esthétique (moderne, minimaliste, etc.)",
+  "mood": "ambiance générale (professionnel, créatif, etc.)",
+  "composition": "style de composition (grille, asymétrique, etc.)",
+  "colorPalette": ["couleur1", "couleur2", "couleur3"],
+  "typography": ["font1", "font2"]
+}`
                 }],
-                temperature: 0.7
+                temperature: 0.3,
+                max_tokens: 500
             })
         });
+
+        if (!openaiResponse.ok) {
+            const errorData = await openaiResponse.text();
+            throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorData}`);
+        }
 
         const aiData = await openaiResponse.json();
         
         if (!aiData.choices || !aiData.choices[0]) {
             throw new Error('Invalid OpenAI response');
         }
-        
+
         let analysis;
         try {
-            analysis = JSON.parse(aiData.choices[0].message.content);
+            const content = aiData.choices[0].message.content.trim();
+            // Remove markdown code blocks if present
+            const cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+            analysis = JSON.parse(cleanContent);
         } catch (parseError) {
             console.error('Failed to parse AI response:', aiData.choices[0].message.content);
-            // Fallback avec les données brutes
+            // Fallback with extracted data
             analysis = {
-                aesthetic: 'modern, clean',
-                mood: 'professional',
-                composition: 'structured layout',
-                colorPalette: styleData.allColors.slice(0, 6)
+                aesthetic: 'Style moderne et épuré',
+                mood: 'Professionnel',
+                composition: 'Grille structurée',
+                colorPalette: styleInfo.colors.slice(0, 5) || ['#000000', '#ffffff'],
+                typography: styleInfo.fonts.slice(0, 3) || ['Arial', 'sans-serif']
             };
         }
 
         console.log('✅ Analysis complete:', analysis);
 
-        // Retourner le résultat
         return res.status(200).json({
             success: true,
-            url,
-            style: {
-                ...styleData,
-                ...analysis
-            }
+            url: url,
+            style: analysis
         });
 
     } catch (error) {
-        console.error('Error analyzing website:', error);
+        console.error('❌ Error analyzing website:', error);
         return res.status(500).json({ 
-            error: 'Failed to analyze website',
-            message: error.message 
+            error: `Failed to analyze website: ${error.message}` 
         });
     }
 };
+
+/**
+ * Extrait les informations de style basiques depuis le HTML brut
+ */
+function extractStyleFromHTML(html) {
+    const colors = [];
+    const fonts = [];
+    let cssSnippet = '';
+
+    // Extraire les couleurs (hex, rgb, rgba)
+    const colorRegex = /#[0-9a-fA-F]{3,6}|rgba?\([^)]+\)/g;
+    const colorMatches = html.match(colorRegex);
+    if (colorMatches) {
+        colors.push(...[...new Set(colorMatches)].slice(0, 10));
+    }
+
+    // Extraire les fonts
+    const fontRegex = /font-family:\s*['"]?([^'";]+)['"]?/gi;
+    let fontMatch;
+    while ((fontMatch = fontRegex.exec(html)) !== null) {
+        const font = fontMatch[1].split(',')[0].trim();
+        if (!fonts.includes(font)) {
+            fonts.push(font);
+        }
+        if (fonts.length >= 5) break;
+    }
+
+    // Extraire un extrait de CSS
+    const styleTagMatch = html.match(/<style[^>]*>([\s\S]{0,1000})/i);
+    if (styleTagMatch) {
+        cssSnippet = styleTagMatch[1];
+    }
+
+    return { colors, fonts, cssSnippet };
+}
