@@ -1285,8 +1285,9 @@ class ImageGeneratorApp {
         
         // Colors
         colorsDiv.innerHTML = '';
-        if (style.allColors && style.allColors.length > 0) {
-            style.allColors.forEach(color => {
+        const colors = style.colorPalette || style.allColors || [];
+        if (colors.length > 0) {
+            colors.forEach(color => {
                 const swatch = document.createElement('div');
                 swatch.className = 'color-swatch';
                 swatch.style.backgroundColor = color;
@@ -1300,8 +1301,9 @@ class ImageGeneratorApp {
         
         // Fonts
         fontsDiv.innerHTML = '';
-        if (style.allFonts && style.allFonts.length > 0) {
-            style.allFonts.forEach(font => {
+        const fonts = style.typography || style.allFonts || [];
+        if (fonts.length > 0) {
+            fonts.forEach(font => {
                 const fontItem = document.createElement('div');
                 fontItem.className = 'font-item';
                 fontItem.textContent = font;
