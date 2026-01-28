@@ -67,23 +67,29 @@ module.exports = async (req, res) => {
                     content: 'Tu es un expert en design web. Analyse le code HTML/CSS fourni et déduis le style visuel du site.'
                 }, {
                     role: 'user',
-                    content: `Analyse ce site web (${url}) et son code HTML/CSS.
+                    content: `Analyse ce site web : ${url}
 
-Informations extraites:
-- Couleurs détectées: ${JSON.stringify(styleInfo.colors)}
-- Fonts détectées: ${JSON.stringify(styleInfo.fonts)}
-- CSS inline/style tags: ${styleInfo.cssSnippet}
+📊 Données pré-extraites du HTML:
+- Couleurs trouvées: ${styleInfo.colors.length > 0 ? JSON.stringify(styleInfo.colors) : 'aucune'}
+- Polices trouvées: ${styleInfo.fonts.length > 0 ? JSON.stringify(styleInfo.fonts) : 'aucune'}
 
-Extrait du HTML (premiers 3000 caractères):
-${html.substring(0, 3000)}
+📄 Code HTML/CSS (premiers 5000 caractères):
+${html.substring(0, 5000)}
 
-Réponds UNIQUEMENT avec un JSON valide (sans markdown) contenant:
+INSTRUCTIONS:
+1. Si des couleurs sont pré-extraites, utilise-les (nettoie-les et convertis en hex si besoin)
+2. Si aucune couleur, analyse le HTML et déduis 5 couleurs probables pour ce type de site
+3. Si des polices sont pré-extraites, utilise-les
+4. Si aucune police, analyse le HTML et déduis 2-3 polices appropriées
+5. Analyse le style esthétique général du site
+
+Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks, sans \`\`\`json) :
 {
-  "aesthetic": "description du style esthétique (moderne, minimaliste, etc.)",
-  "mood": "ambiance générale (professionnel, créatif, etc.)",
-  "composition": "style de composition (grille, asymétrique, etc.)",
-  "colorPalette": ["couleur1", "couleur2", "couleur3"],
-  "typography": ["font1", "font2"]
+  "aesthetic": "description précise du style esthétique",
+  "mood": "ambiance dégagée par le site",
+  "composition": "style de mise en page",
+  "colorPalette": ["#hex1", "#hex2", "#hex3", "#hex4", "#hex5"],
+  "typography": ["Police principale", "Police secondaire"]
 }`
                 }],
                 temperature: 0.3,
@@ -110,14 +116,26 @@ Réponds UNIQUEMENT avec un JSON valide (sans markdown) contenant:
             analysis = JSON.parse(cleanContent);
         } catch (parseError) {
             console.error('Failed to parse AI response:', aiData.choices[0].message.content);
-            // Fallback with extracted data
+            // Fallback with extracted data or defaults
             analysis = {
                 aesthetic: 'Style moderne et épuré',
                 mood: 'Professionnel',
                 composition: 'Grille structurée',
-                colorPalette: styleInfo.colors.slice(0, 5) || ['#000000', '#ffffff'],
-                typography: styleInfo.fonts.slice(0, 3) || ['Arial', 'sans-serif']
+                colorPalette: styleInfo.colors.length > 0 
+                    ? styleInfo.colors.slice(0, 5) 
+                    : ['#1a1a1a', '#ffffff', '#3b82f6', '#6b7280', '#f3f4f6'],
+                typography: styleInfo.fonts.length > 0 
+                    ? styleInfo.fonts.slice(0, 3) 
+                    : ['Inter', 'Roboto', 'Arial']
             };
+        }
+
+        // S'assurer qu'on a toujours des valeurs valides
+        if (!analysis.colorPalette || analysis.colorPalette.length === 0) {
+            analysis.colorPalette = ['#1a1a1a', '#ffffff', '#3b82f6', '#6b7280', '#f3f4f6'];
+        }
+        if (!analysis.typography || analysis.typography.length === 0) {
+            analysis.typography = ['Inter', 'Roboto', 'Arial'];
         }
 
         console.log('✅ Analysis complete:', analysis);
@@ -140,33 +158,62 @@ Réponds UNIQUEMENT avec un JSON valide (sans markdown) contenant:
  * Extrait les informations de style basiques depuis le HTML brut
  */
 function extractStyleFromHTML(html) {
-    const colors = [];
-    const fonts = [];
+    const colors = new Set();
+    const fonts = new Set();
     let cssSnippet = '';
 
-    // Extraire les couleurs (hex, rgb, rgba)
-    const colorRegex = /#[0-9a-fA-F]{3,6}|rgba?\([^)]+\)/g;
-    const colorMatches = html.match(colorRegex);
-    if (colorMatches) {
-        colors.push(...[...new Set(colorMatches)].slice(0, 10));
+    // Extraire les couleurs (hex, rgb, rgba, hsl)
+    const hexRegex = /#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/g;
+    const rgbRegex = /rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(?:,\s*[\d.]+\s*)?\)/g;
+    const hslRegex = /hsla?\(\s*\d+\s*,\s*[\d.]+%\s*,\s*[\d.]+%\s*(?:,\s*[\d.]+\s*)?\)/g;
+    
+    [hexRegex, rgbRegex, hslRegex].forEach(regex => {
+        const matches = html.match(regex);
+        if (matches) {
+            matches.forEach(color => colors.add(color));
+        }
+    });
+
+    // Extraire les fonts (font-family, Google Fonts, CSS imports)
+    // 1. Depuis font-family
+    const fontFamilyRegex = /font-family:\s*['"]?([^'";{}]+)['"]?[;{}]/gi;
+    let fontMatch;
+    while ((fontMatch = fontFamilyRegex.exec(html)) !== null) {
+        const fontList = fontMatch[1].split(',');
+        fontList.forEach(font => {
+            const cleanFont = font.trim().replace(/['"]/g, '');
+            if (cleanFont && !cleanFont.includes('sans-serif') && !cleanFont.includes('serif') && !cleanFont.includes('monospace')) {
+                fonts.add(cleanFont);
+            }
+        });
     }
 
-    // Extraire les fonts
-    const fontRegex = /font-family:\s*['"]?([^'";]+)['"]?/gi;
-    let fontMatch;
-    while ((fontMatch = fontRegex.exec(html)) !== null) {
-        const font = fontMatch[1].split(',')[0].trim();
-        if (!fonts.includes(font)) {
-            fonts.push(font);
-        }
-        if (fonts.length >= 5) break;
+    // 2. Google Fonts dans les links
+    const googleFontsRegex = /fonts\.googleapis\.com\/css[^"]*family=([^"&:]+)/gi;
+    while ((fontMatch = googleFontsRegex.exec(html)) !== null) {
+        const fontNames = fontMatch[1].split('|');
+        fontNames.forEach(font => {
+            const cleanFont = font.replace(/\+/g, ' ').split(':')[0];
+            if (cleanFont) fonts.add(cleanFont);
+        });
+    }
+
+    // 3. @import de fonts
+    const importFontRegex = /@import\s+url\(['"]?[^'"]*family=([^'"&:]+)/gi;
+    while ((fontMatch = importFontRegex.exec(html)) !== null) {
+        const fontName = fontMatch[1].replace(/\+/g, ' ').split(':')[0];
+        if (fontName) fonts.add(fontName);
     }
 
     // Extraire un extrait de CSS
-    const styleTagMatch = html.match(/<style[^>]*>([\s\S]{0,1000})/i);
+    const styleTagMatch = html.match(/<style[^>]*>([\s\S]{0,2000})/i);
     if (styleTagMatch) {
         cssSnippet = styleTagMatch[1];
     }
 
-    return { colors, fonts, cssSnippet };
+    return { 
+        colors: Array.from(colors).slice(0, 15), 
+        fonts: Array.from(fonts).slice(0, 8),
+        cssSnippet 
+    };
 }
