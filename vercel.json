@@ -25,6 +25,8 @@
     }
   ],
   "env": {
-    "OPENAI_API_KEY": "@openai_api_key"
+    "OPENAI_API_KEY": "@openai_api_key",
+    "UNSPLASH_ACCESS_KEY": "@unsplash_access_key",
+    "PEXELS_API_KEY": "@pexels_api_key"
   }
 }
