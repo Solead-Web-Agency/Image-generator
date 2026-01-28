@@ -76,18 +76,22 @@ module.exports = async (req, res) => {
 📄 Code HTML/CSS (premiers 5000 caractères):
 ${html.substring(0, 5000)}
 
-INSTRUCTIONS:
-1. Si des couleurs sont pré-extraites, utilise-les (nettoie-les et convertis en hex si besoin)
-2. Si aucune couleur, analyse le HTML et déduis 5 couleurs probables pour ce type de site
-3. Si des polices sont pré-extraites, utilise-les
-4. Si aucune police, analyse le HTML et déduis 2-3 polices appropriées
-5. Analyse le style esthétique général du site
+INSTRUCTIONS IMPORTANTES:
+1. Analyse le contenu, la structure et le type de site
+2. TOUJOURS retourner 5 couleurs en format #hex (même si tu dois les deviner intelligemment)
+3. TOUJOURS retourner au moins 2 polices (même si tu dois les suggérer basé sur le style)
+4. Utilise les couleurs/fonts pré-extraites si disponibles, sinon déduis-les du contexte
 
-Réponds UNIQUEMENT avec un JSON valide (sans markdown, sans backticks, sans \`\`\`json) :
+Exemples de déduction intelligente:
+- Site tech/startup → #0ea5e9, #1e293b, #f8fafc, #64748b, #0f172a + Inter, Roboto
+- Site créatif/agence → #ff6b6b, #4ecdc4, #ffe66d, #292f36, #f7f7f7 + Poppins, Montserrat
+- Site e-commerce → #2563eb, #ffffff, #1f2937, #f3f4f6, #10b981 + Inter, Arial
+
+Réponds UNIQUEMENT avec ce JSON valide (sans markdown, sans backticks):
 {
-  "aesthetic": "description précise du style esthétique",
-  "mood": "ambiance dégagée par le site",
-  "composition": "style de mise en page",
+  "aesthetic": "description du style esthétique (sois précis et descriptif)",
+  "mood": "ambiance du site (professionnel/créatif/chaleureux/etc)",
+  "composition": "style de mise en page (grille/asymétrique/centré/etc)",
   "colorPalette": ["#hex1", "#hex2", "#hex3", "#hex4", "#hex5"],
   "typography": ["Police principale", "Police secondaire"]
 }`
