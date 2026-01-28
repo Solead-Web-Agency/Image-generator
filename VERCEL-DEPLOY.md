@@ -29,22 +29,31 @@ Ouvre : https://vercel.com/
 
 ### **3. Configurer les variables d'environnement**
 
-⚠️ **TRÈS IMPORTANT** : Ajoute ces variables d'environnement dans Vercel :
+⚠️ **TRÈS IMPORTANT** : Avant de déployer, ajoute ces variables d'environnement :
 
 #### **Dans la section "Environment Variables"** :
 
-| **Nom** | **Valeur** |
-|---------|-----------|
-| `OPENAI_API_KEY` | ⚠️ **Utilise la clé de ton fichier `.env`** |
-| `UNSPLASH_ACCESS_KEY` | ⚠️ **Utilise la clé de ton fichier `.env`** |
-| `PEXELS_API_KEY` | ⚠️ **Utilise la clé de ton fichier `.env`** |
+Tu dois ajouter **3 variables** (utilise les valeurs de ton fichier `.env` local) :
 
-**Pour chaque variable** :
-1. Clique sur **"Add Variable"**
-2. Entre le **Nom**
-3. Colle la **Valeur**
-4. Coche **"Production", "Preview", "Development"**
+1. **`OPENAI_API_KEY`**
+   - Valeur : `sk-proj-...` (ta clé OpenAI complète)
+   - Environnements : ✅ Production, ✅ Preview, ✅ Development
+
+2. **`UNSPLASH_ACCESS_KEY`**
+   - Valeur : `C_BIutXEw...` (ta clé Unsplash)
+   - Environnements : ✅ Production, ✅ Preview, ✅ Development
+
+3. **`PEXELS_API_KEY`**
+   - Valeur : `by5VHhKGf...` (ta clé Pexels)
+   - Environnements : ✅ Production, ✅ Preview, ✅ Development
+
+**Comment ajouter une variable** :
+1. Clique sur **"Add New" → "Environment Variable"**
+2. Entre le **Name** (ex: `OPENAI_API_KEY`)
+3. Colle la **Value** depuis ton `.env`
+4. Sélectionne tous les environnements
 5. Clique sur **"Save"**
+6. Répète pour les 2 autres variables
 
 ---
 
