@@ -86,18 +86,21 @@ https://image-generator-xxx.vercel.app
 
 ## ⚠️ **Notes importantes**
 
-### **1. Puppeteer sur Vercel**
+### **1. Scanner de site sur Vercel**
 
-⚠️ **Puppeteer peut ne pas fonctionner sur Vercel** (limite de taille)
+✅ **Le scanner utilise maintenant fetch + GPT-4** (pas de Puppeteer)
 
-**Solutions** :
-- Utiliser `puppeteer-core` + Chrome AWS Lambda
-- Ou utiliser **Vercel Edge Functions**
-- Ou désactiver le scanner de site en production
+**Comment ça marche** :
+- Fetch le HTML du site directement
+- Extrait les couleurs et fonts depuis le code HTML/CSS
+- Analyse avec GPT-4o-mini pour déterminer le style
 
-Si le scanner de site ne fonctionne pas sur Vercel, tu peux :
-1. Utiliser uniquement les **Presets**
-2. Utiliser **Pexels** (qui fonctionne)
+**Avantages** :
+- ✅ Léger et rapide
+- ✅ Pas de problème de bibliothèques partagées
+- ✅ Fonctionne parfaitement sur Vercel
+
+**Note** : Certains sites avec protection anti-bot peuvent bloquer le fetch
 
 ### **2. Stocker les images générées**
 
@@ -116,11 +119,11 @@ Actuellement, les images générées ne seront **pas sauvegardées** sur Vercel.
 
 ### **Tester les fonctionnalités** :
 
-1. ✅ **Presets** → Devrait fonctionner
-2. ⚠️ **Scanner un site** → Peut ne pas fonctionner (Puppeteer)
-3. ✅ **Pexels** → Devrait fonctionner
-4. ✅ **Génération d'images** → Devrait fonctionner
-5. ⚠️ **Sauvegarde d'images** → Ne fonctionnera pas (read-only)
+1. ✅ **Presets** → Fonctionne parfaitement
+2. ✅ **Scanner un site** → Fonctionne maintenant (fetch + GPT-4)
+3. ✅ **Pexels** → Fonctionne parfaitement
+4. ✅ **Génération d'images** → Fonctionne parfaitement
+5. ⚠️ **Sauvegarde d'images** → Ne fonctionne pas (filesystem read-only sur Vercel)
 
 ---
 
