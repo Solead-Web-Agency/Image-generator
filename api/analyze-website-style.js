@@ -9,7 +9,7 @@
  */
 
 // Pour installer les dépendances nécessaires :
-// npm install puppeteer colorthief
+// npm install puppeteer-core @sparticuz/chromium node-fetch
 
 const fetch = require('node-fetch');
 
@@ -34,14 +34,17 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // MÉTHODE 1 : Puppeteer (Actif)
-        const puppeteer = require('puppeteer');
+        // MÉTHODE 1 : Puppeteer avec Chromium pour Vercel
+        const puppeteer = require('puppeteer-core');
+        const chromium = require('@sparticuz/chromium');
         
         console.log('🚀 Launching Puppeteer for:', url);
         
         const browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
         });
         
         const page = await browser.newPage();
