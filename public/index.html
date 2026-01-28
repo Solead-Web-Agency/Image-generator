@@ -7,6 +7,30 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Login Overlay -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>🔒 Accès sécurisé</h1>
+                <p>Veuillez vous connecter pour accéder à l'application</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="loginUsername">Identifiant</label>
+                    <input type="text" id="loginUsername" class="form-input" autocomplete="username" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Mot de passe</label>
+                    <input type="password" id="loginPassword" class="form-input" autocomplete="current-password" required>
+                </div>
+                <div id="loginError" class="login-error" style="display: none;"></div>
+                <button type="submit" class="btn-primary btn-large">
+                    🔓 Se connecter
+                </button>
+            </form>
+        </div>
+    </div>
+    
     <div class="container">
         <header>
             <h1>Images Generator</h1>
@@ -587,6 +611,7 @@ MacBook Pro,Ordinateur portable 16 pouces,[à générer],Tech,2500€</pre>
         </footer>
     </div>
 
+    <script src="auth.js"></script>
     <script src="config.js"></script>
     <script src="api-client.js"></script>
     <script src="accordion-manager.js"></script>
