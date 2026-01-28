@@ -39,20 +39,30 @@ Change `username` et `password` par les valeurs de ton choix.
 ### **Important** :
 
 - ⚠️ Les identifiants sont stockés **en dur côté client**
-- ⚠️ Cette protection est **basique** et peut être contournée par un utilisateur technique
+- ⚠️ Cette protection est **basique** et peut être contournée par un utilisateur technique avancé
 - ✅ Convient pour un **usage interne** ou une **démo privée**
 - ❌ **NE PAS utiliser** pour des données sensibles
 
-### **Fonctionnement** :
+### **Protections en place** :
 
 1. **sessionStorage** : L'authentification est stockée dans `sessionStorage`
    - ✅ Disparaît à la fermeture du navigateur
    - ✅ Pas de cookies
    - ✅ Isolé par onglet
 
-2. **Accès direct** : Si l'utilisateur recharge la page, il devra se reconnecter
+2. **Container caché** : L'application est cachée par défaut (`display: none`)
+   - ✅ Supprimer l'overlay ne suffit pas
+   - ✅ L'app n'est visible qu'après authentification
 
-3. **Déconnexion** : Un bouton "🔓 Déconnexion" apparaît dans le header après connexion
+3. **Initialisation bloquée** : Les scripts ne s'initialisent pas sans authentification
+   - ✅ `app.js` vérifie l'auth avant de démarrer
+
+4. **Surveillance continue** :
+   - ✅ Vérification toutes les 5 secondes
+   - ✅ Détection des tentatives de manipulation DOM (MutationObserver)
+   - ✅ Re-cache l'app si quelqu'un essaie de modifier le DOM
+
+5. **Déconnexion** : Un bouton "🔓 Déconnexion" apparaît dans le header après connexion
 
 ---
 

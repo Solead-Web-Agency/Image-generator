@@ -80,13 +80,19 @@ function handleLogin(event) {
 }
 
 /**
- * Cache l'overlay de login
+ * Cache l'overlay de login et affiche l'application
  */
 function hideLoginOverlay() {
     const overlay = document.getElementById('loginOverlay');
+    const appContainer = document.getElementById('appContainer');
+    
     overlay.style.animation = 'fadeOut 0.3s ease';
     setTimeout(() => {
         overlay.classList.add('hidden');
+        // Afficher l'application
+        if (appContainer) {
+            appContainer.style.display = 'block';
+        }
     }, 300);
 }
 
@@ -118,6 +124,11 @@ function initAuth() {
     } else {
         console.log('🔒 Authentification requise');
         showLoginOverlay();
+        // S'assurer que l'app est cachée
+        const appContainer = document.getElementById('appContainer');
+        if (appContainer) {
+            appContainer.style.display = 'none';
+        }
     }
     
     // Gérer la soumission du formulaire
@@ -125,6 +136,69 @@ function initAuth() {
     
     // Ajouter un bouton de déconnexion dans le header (optionnel)
     addLogoutButton();
+    
+    // Vérifier périodiquement l'authentification (protection supplémentaire)
+    startAuthMonitoring();
+    
+    // Protéger contre la manipulation DOM
+    protectDOMManipulation();
+}
+
+/**
+ * Surveille l'authentification et bloque l'accès si elle est perdue
+ */
+function startAuthMonitoring() {
+    setInterval(() => {
+        if (!isAuthenticated()) {
+            const appContainer = document.getElementById('appContainer');
+            const loginOverlay = document.getElementById('loginOverlay');
+            
+            if (appContainer) {
+                appContainer.style.display = 'none';
+            }
+            if (loginOverlay) {
+                loginOverlay.classList.remove('hidden');
+            }
+            
+            console.warn('⚠️ Session expirée ou modifiée - accès révoqué');
+        }
+    }, 5000); // Vérifier toutes les 5 secondes
+}
+
+/**
+ * Protège contre les tentatives de manipulation du DOM
+ */
+function protectDOMManipulation() {
+    const appContainer = document.getElementById('appContainer');
+    const loginOverlay = document.getElementById('loginOverlay');
+    
+    if (!appContainer || !loginOverlay) return;
+    
+    // Observer les changements sur le container de l'app
+    const observer = new MutationObserver(() => {
+        if (!isAuthenticated()) {
+            // Si pas authentifié mais l'app est visible, la cacher
+            if (appContainer.style.display !== 'none') {
+                appContainer.style.display = 'none';
+                console.warn('⚠️ Tentative d\'accès non autorisé détectée');
+            }
+            // Si l'overlay est caché, le réafficher
+            if (loginOverlay.classList.contains('hidden')) {
+                loginOverlay.classList.remove('hidden');
+            }
+        }
+    });
+    
+    // Observer les changements de style
+    observer.observe(appContainer, {
+        attributes: true,
+        attributeFilter: ['style', 'class']
+    });
+    
+    observer.observe(loginOverlay, {
+        attributes: true,
+        attributeFilter: ['style', 'class']
+    });
 }
 
 /**

@@ -1843,6 +1843,18 @@ class ImageGeneratorApp {
 
 // Initialiser l'application quand le DOM est prêt
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new ImageGeneratorApp();
-    console.log('Image Generator App initialized');
+    // Vérifier l'authentification avant d'initialiser l'app
+    const checkAuth = () => {
+        // Fonction isAuthenticated devrait être disponible via auth.js
+        if (typeof isAuthenticated !== 'undefined' && !isAuthenticated()) {
+            console.warn('⚠️ Accès refusé : authentification requise');
+            return null;
+        }
+        return new ImageGeneratorApp();
+    };
+    
+    const app = checkAuth();
+    if (app) {
+        console.log('✅ Image Generator App initialized');
+    }
 });
