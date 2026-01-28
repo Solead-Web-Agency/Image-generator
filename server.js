@@ -16,6 +16,9 @@ app.use(express.static('public'));
 app.post('/api/generate-image', require('./api/generate-image'));
 app.post('/api/save-image', require('./api/save-image'));
 app.post('/api/analyze-page', require('./api/analyze-page'));
+app.post('/api/analyze-website-style', require('./api/analyze-website-style'));
+app.post('/api/search-library-images', require('./api/search-library-images'));
+app.post('/api/analyze-library-style', require('./api/analyze-library-style'));
 
 // Route principale
 app.get('/', (req, res) => {

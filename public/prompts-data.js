@@ -10,33 +10,64 @@ const PROMPTS_DATA = {
 
 // Charger les fichiers JSON de prompts
 async function loadPromptsData() {
-    if (PROMPTS_DATA.loaded || PROMPTS_DATA.loading) {
-        return PROMPTS_DATA.loaded;
+    console.log('🔄 [loadPromptsData] START - loaded:', PROMPTS_DATA.loaded, 'loading:', PROMPTS_DATA.loading);
+    
+    if (PROMPTS_DATA.loaded) {
+        console.log('✅ [loadPromptsData] Already loaded, returning immediately');
+        return true;
+    }
+    
+    if (PROMPTS_DATA.loading) {
+        console.log('⏳ [loadPromptsData] Already loading, waiting...');
+        return new Promise(resolve => {
+            const checkInterval = setInterval(() => {
+                if (PROMPTS_DATA.loaded) {
+                    clearInterval(checkInterval);
+                    resolve(true);
+                }
+            }, 100);
+        });
     }
 
     PROMPTS_DATA.loading = true;
+    console.log('🌐 [loadPromptsData] Starting fetch...');
 
     try {
+        console.log('📡 Fetching JSON files...');
         const [v1Response, v2Response, v3Response] = await Promise.all([
-            fetch('rankwell-images-prompt.json'),
-            fetch('rankwell-images-prompt-v2-glassmorphism.json'),
-            fetch('rankwell-images-prompt-v3-fluid-organic.json')
+            fetch('rankwell-images-prompt.json').then(r => {
+                console.log('📄 V1 response status:', r.status, r.ok);
+                return r;
+            }),
+            fetch('rankwell-images-prompt-v2-glassmorphism.json').then(r => {
+                console.log('📄 V2 response status:', r.status, r.ok);
+                return r;
+            }),
+            fetch('rankwell-images-prompt-v3-fluid-organic.json').then(r => {
+                console.log('📄 V3 response status:', r.status, r.ok);
+                return r;
+            })
         ]);
 
         if (!v1Response.ok || !v2Response.ok || !v3Response.ok) {
-            throw new Error('Erreur lors du chargement des fichiers de prompts. Assurez-vous d\'utiliser un serveur web local.');
+            throw new Error(`HTTP Error: v1=${v1Response.status}, v2=${v2Response.status}, v3=${v3Response.status}`);
         }
 
+        console.log('📦 Parsing JSON...');
         PROMPTS_DATA.v1 = await v1Response.json();
+        console.log('✅ V1 parsed:', !!PROMPTS_DATA.v1);
         PROMPTS_DATA.v2 = await v2Response.json();
+        console.log('✅ V2 parsed:', !!PROMPTS_DATA.v2);
         PROMPTS_DATA.v3 = await v3Response.json();
+        console.log('✅ V3 parsed:', !!PROMPTS_DATA.v3);
+        
         PROMPTS_DATA.loaded = true;
         PROMPTS_DATA.loading = false;
 
-        console.log('Prompts data loaded successfully');
+        console.log('✅ [loadPromptsData] SUCCESS - All data loaded!');
         return true;
     } catch (error) {
-        console.error('Error loading prompts data:', error);
+        console.error('❌ [loadPromptsData] ERROR:', error);
         PROMPTS_DATA.loading = false;
         PROMPTS_DATA.loaded = false;
         throw error;
@@ -94,4 +125,20 @@ function getTemplate(styleVersion, templateId) {
 }
 
 // Initialiser le chargement au démarrage
-let dataLoadingPromise = loadPromptsData();
+console.log('🚀 [INIT] Démarrage du chargement des données JSON...');
+let dataLoadingPromise = loadPromptsData()
+    .then(result => {
+        console.log('🎉 [INIT] Données JSON chargées avec succès !', { 
+            v1: !!PROMPTS_DATA.v1, 
+            v2: !!PROMPTS_DATA.v2, 
+            v3: !!PROMPTS_DATA.v3,
+            loaded: PROMPTS_DATA.loaded 
+        });
+        return result;
+    })
+    .catch(error => {
+        console.error('💥 [INIT] Erreur chargement JSON:', error);
+        throw error;
+    });
+
+console.log('📋 [INIT] dataLoadingPromise created:', dataLoadingPromise);

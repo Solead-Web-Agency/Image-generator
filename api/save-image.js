@@ -33,13 +33,20 @@ module.exports = async (req, res) => {
         const styleName = metadata?.style || 'unknown';
         const subject = metadata?.subject || 'image';
         
+        // Nettoyer le nom du style (pour éviter les caractères invalides dans le nom de fichier)
+        const cleanStyle = styleName
+            .substring(0, 30)
+            .replace(/[^a-z0-9-_]/gi, '-')
+            .replace(/-+/g, '-')
+            .toLowerCase();
+        
         const cleanSubject = subject
             .substring(0, 50)
             .replace(/[^a-z0-9-_]/gi, '-')
             .replace(/-+/g, '-')
             .toLowerCase();
         
-        const filename = `${timestamp}-${styleName}-${cleanSubject}.png`;
+        const filename = `${timestamp}-${cleanStyle}-${cleanSubject}.png`;
         const relativePath = `${dateFolder}/${filename}`;
 
         // Télécharger l'image depuis OpenAI

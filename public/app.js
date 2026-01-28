@@ -11,6 +11,14 @@ class ImageGeneratorApp {
         this.generatedPrompt = null;
         this.generatedImageUrl = null;
         this.dataLoaded = false;
+        this.currentMode = null; // 'manual', 'scan', 'csv'
+        this.currentStyleSource = 'preset'; // 'preset', 'website', 'upload', 'library'
+        this.currentLibrary = 'pexels'; // Default to Pexels (Unsplash temporarily disabled)
+        this.selectedLibraryImages = [];
+        this.librarySearchResults = [];
+        this.scannedStyleData = null;
+        this.scannedStyleUrl = null;
+        this.customStyleData = null;
 
         this.initializeElements();
         this.attachEventListeners();
@@ -19,11 +27,22 @@ class ImageGeneratorApp {
     }
 
     initializeElements() {
+        // Global accordion steps
+        this.globalSteps = {
+            step1: document.getElementById('globalStep1'),
+            step2: document.getElementById('globalStep2'),
+            step3: document.getElementById('globalStep3'),
+            step4: document.getElementById('globalStep4'),
+            step5: document.getElementById('globalStep5')
+        };
+        
         // Mode buttons
         this.modeButtons = document.querySelectorAll('.mode-btn');
-        this.manualSection = document.getElementById('manualSection');
-        this.scanSection = document.getElementById('scanSection');
-        this.csvSection = document.getElementById('csvSection');
+        
+        // Mode content containers
+        this.manualContent = document.getElementById('manualContent');
+        this.scanContent = document.getElementById('scanContent');
+        this.csvContent = document.getElementById('csvContent');
         
         // Scan elements
         this.urlInput = document.getElementById('urlInput');
@@ -96,9 +115,31 @@ class ImageGeneratorApp {
     }
 
     attachEventListeners() {
+        // Global accordion headers (géré par accordion-manager.js)
+        
         // Mode selection
         this.modeButtons.forEach(btn => {
             btn.addEventListener('click', () => this.handleModeChange(btn));
+        });
+        
+        // Manual mode
+        if (this.generatePromptBtn) {
+            this.generatePromptBtn.addEventListener('click', () => this.handleGeneratePrompt());
+        }
+        
+        // Scan tabs
+        document.querySelectorAll('.scan-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                
+                // Update buttons
+                document.querySelectorAll('.scan-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Update content
+                document.querySelectorAll('.scan-tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(tab + 'Tab').classList.add('active');
+            });
         });
         
         // Scan buttons
@@ -114,74 +155,190 @@ class ImageGeneratorApp {
         this.generateCSVImagesBtn.addEventListener('click', () => this.handleGenerateCSVImages());
         this.exportCSVBtn.addEventListener('click', () => this.handleExportCSV());
         
-        // Style selection
+        // Style source selector
+        document.querySelectorAll('.style-source-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.handleStyleSourceChange(btn));
+        });
+        
+        // Style selection (presets)
         this.styleCards.forEach(card => {
             card.addEventListener('click', () => this.handleStyleSelection(card));
         });
-
-        // Subject input
-        this.subjectInput.addEventListener('input', () => this.validateForm());
-
-        // Template selection
-        this.templateSelect.addEventListener('change', () => {
-            const templateId = this.templateSelect.value;
-            if (templateId) {
-                promptGenerator.setTemplate(templateId);
-            }
+        
+        // Website style scanner
+        const scanWebsiteStyleBtn = document.getElementById('scanWebsiteStyleBtn');
+        if (scanWebsiteStyleBtn) {
+            scanWebsiteStyleBtn.addEventListener('click', () => this.handleScanWebsiteStyle());
+        }
+        
+        // Upload style files
+        const styleUploadZone = document.getElementById('styleUploadZone');
+        const styleFilesInput = document.getElementById('styleFilesInput');
+        if (styleUploadZone && styleFilesInput) {
+            styleUploadZone.addEventListener('click', () => styleFilesInput.click());
+            styleFilesInput.addEventListener('change', (e) => this.handleStyleFilesUpload(e));
+            
+            // Drag & drop
+            styleUploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                styleUploadZone.style.borderColor = 'var(--primary-blue)';
+            });
+            styleUploadZone.addEventListener('dragleave', () => {
+                styleUploadZone.style.borderColor = 'var(--border-color)';
+            });
+            styleUploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                styleUploadZone.style.borderColor = 'var(--border-color)';
+                this.handleStyleFilesDrop(e);
+            });
+        }
+        
+        // Library search
+        const librarySearchBtn = document.getElementById('librarySearchBtn');
+        const librarySearchInput = document.getElementById('librarySearchInput');
+        if (librarySearchBtn && librarySearchInput) {
+            librarySearchBtn.addEventListener('click', () => this.handleLibrarySearch());
+            librarySearchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') this.handleLibrarySearch();
+            });
+        }
+        
+        // Library tabs
+        document.querySelectorAll('.library-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Bloquer si désactivé
+                if (btn.disabled || btn.classList.contains('disabled')) {
+                    this.showMessage('⚠️ Unsplash est temporairement indisponible. Utilisez Pexels !', 'error');
+                    return;
+                }
+                
+                document.querySelectorAll('.library-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.currentLibrary = btn.dataset.library;
+            });
         });
 
+        // Subject input
+        if (this.subjectInput) {
+            this.subjectInput.addEventListener('input', () => this.validateForm());
+        }
+
+        // Template selection
+        if (this.templateSelect) {
+            this.templateSelect.addEventListener('change', () => {
+                const templateId = this.templateSelect.value;
+                if (templateId) {
+                    promptGenerator.setTemplate(templateId);
+                }
+            });
+        }
+
         // Generate prompt button
-        this.generatePromptBtn.addEventListener('click', () => this.handleGeneratePrompt());
+        if (this.generatePromptBtn) {
+            this.generatePromptBtn.addEventListener('click', () => this.handleGeneratePrompt());
+        }
 
         // Copy prompt button
-        this.copyPromptBtn.addEventListener('click', () => this.handleCopyPrompt());
+        if (this.copyPromptBtn) {
+            this.copyPromptBtn.addEventListener('click', () => this.handleCopyPrompt());
+        }
 
         // Edit prompt button
-        this.editPromptBtn.addEventListener('click', () => this.handleEditPrompt());
+        if (this.editPromptBtn) {
+            this.editPromptBtn.addEventListener('click', () => this.handleEditPrompt());
+        }
 
         // Generate image button
-        this.generateImageBtn.addEventListener('click', () => this.handleGenerateImage());
+        if (this.generateImageBtn) {
+            this.generateImageBtn.addEventListener('click', () => this.handleGenerateImage());
+        }
 
         // API key input
         this.apiKeyInput.addEventListener('input', () => this.handleApiKeyChange());
         
         // History buttons
-        this.refreshHistoryBtn.addEventListener('click', () => this.refreshHistory());
-        this.exportHistoryBtn.addEventListener('click', () => imageStorage.exportHistory());
-        this.clearHistoryBtn.addEventListener('click', () => this.handleClearHistory());
+        if (this.refreshHistoryBtn) {
+            this.refreshHistoryBtn.addEventListener('click', () => this.refreshHistory());
+        }
+        if (this.exportHistoryBtn) {
+            this.exportHistoryBtn.addEventListener('click', () => imageStorage.exportHistory());
+        }
+        if (this.clearHistoryBtn) {
+            this.clearHistoryBtn.addEventListener('click', () => this.handleClearHistory());
+        }
 
         // Download image button
-        this.downloadImageBtn.addEventListener('click', () => this.handleDownloadImage());
+        if (this.downloadImageBtn) {
+            this.downloadImageBtn.addEventListener('click', () => this.handleDownloadImage());
+        }
 
         // New generation button
-        this.newGenerationBtn.addEventListener('click', () => this.handleNewGeneration());
+        if (this.newGenerationBtn) {
+            this.newGenerationBtn.addEventListener('click', () => this.handleNewGeneration());
+        }
     }
 
     loadSavedApiKey() {
-        if (this.apiKey) {
+        if (this.apiKey && this.apiKeyInput) {
             this.apiKeyInput.value = this.apiKey;
         }
     }
 
     async waitForDataLoad() {
+        console.log('⏳ [APP] waitForDataLoad START');
+        console.log('⏳ [APP] dataLoadingPromise:', dataLoadingPromise);
+        
         try {
-            this.showLoading('Chargement des styles...');
-            await dataLoadingPromise;
+            console.log('⏳ [APP] Awaiting dataLoadingPromise...');
+            const result = await dataLoadingPromise;
+            console.log('✅ [APP] dataLoadingPromise resolved with:', result);
+            
             this.dataLoaded = true;
-            this.hideLoading();
-            console.log('Data loaded successfully in app');
+            console.log('✅ [APP] this.dataLoaded set to true');
+            
+            // Masquer l'indicateur de chargement et afficher les cartes
+            const loadingIndicator = document.getElementById('stylesLoadingIndicator');
+            const styleGrid = document.getElementById('styleGridContainer');
+            const step2Desc = document.getElementById('step2StatusDesc');
+            
+            console.log('🎨 [APP] Updating UI elements...');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+                console.log('✅ [APP] Loading indicator hidden');
+            }
+            if (styleGrid) {
+                styleGrid.style.display = 'grid';
+                console.log('✅ [APP] Style grid displayed');
+            }
+            if (step2Desc) {
+                step2Desc.textContent = 'Sélectionnez la direction artistique';
+            }
+            
+            // Activer les cartes de style
+            this.styleCards.forEach(card => card.classList.remove('disabled'));
+            console.log('✅ [APP] Style cards enabled');
             
             // Charger l'historique
             this.refreshHistory();
+            
+            this.showMessage('Styles chargés avec succès ✅', 'success');
+            console.log('🎉 [APP] waitForDataLoad COMPLETE');
         } catch (error) {
-            this.hideLoading();
-            this.showMessage('Erreur: Impossible de charger les données de style. Assurez-vous d\'utiliser un serveur web local (ex: python -m http.server 8000)', 'error');
-            console.error('Data loading error:', error);
+            console.error('❌ [APP] waitForDataLoad ERROR:', error);
+            this.showMessage('Erreur: Impossible de charger les données de style. Vérifiez la console (F12)', 'error');
+            
+            const step2Desc = document.getElementById('step2StatusDesc');
+            if (step2Desc) {
+                step2Desc.textContent = '❌ Erreur de chargement';
+                step2Desc.style.color = 'var(--error-red)';
+            }
         }
     }
 
     handleStyleSelection(selectedCard) {
+        console.log('🎨 handleStyleSelection called - this.dataLoaded =', this.dataLoaded);
         if (!this.dataLoaded) {
+            console.warn('⚠️ Data not loaded yet!');
             this.showMessage('Veuillez patienter, les données de style sont en cours de chargement...', 'error');
             return;
         }
@@ -200,13 +357,31 @@ class ImageGeneratorApp {
         this.loadTemplates(style);
         
         // Activer le select de template
-        this.templateSelect.disabled = false;
+        if (this.templateSelect) {
+            this.templateSelect.disabled = false;
+        }
 
         // Valider le formulaire
         this.validateForm();
+        
+        this.showMessage(`Style ${style} sélectionné ✅`, 'success');
+        
+        // Compléter l'étape 2 et passer à l'étape 3
+        console.log('🔄 Calling accordionManager.completeStep(2)...');
+        if (typeof accordionManager !== 'undefined') {
+            accordionManager.completeStep(2);
+            console.log('✅ Step 2 completed, should open step 3');
+        } else {
+            console.error('❌ accordionManager is undefined!');
+        }
     }
 
     loadTemplates(styleVersion) {
+        if (!this.templateSelect) {
+            console.log('⚠️ templateSelect not found, skipping loadTemplates');
+            return;
+        }
+        
         const templates = getTemplatesForStyle(styleVersion);
         
         // Vider le select
@@ -222,6 +397,11 @@ class ImageGeneratorApp {
     }
 
     validateForm() {
+        if (!this.subjectInput || !this.generatePromptBtn) {
+            console.log('⚠️ Form elements not found, skipping validateForm');
+            return;
+        }
+        
         const hasStyle = this.selectedStyle !== null;
         const hasSubject = this.subjectInput.value.trim().length > 0;
         
@@ -274,6 +454,11 @@ class ImageGeneratorApp {
         
         // Scroll vers la section
         this.promptSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        // Compléter l'étape 3 et ouvrir l'étape 4
+        if (typeof accordionManager !== 'undefined') {
+            accordionManager.completeStep(3);
+        }
     }
 
     handleCopyPrompt() {
@@ -289,9 +474,16 @@ class ImageGeneratorApp {
 
     handleEditPrompt() {
         // Rendre le prompt éditable
-        const currentPrompt = this.generatedPromptDiv.textContent;
+        // Utiliser la variable stockée plutôt que le textContent du div
+        const currentPrompt = this.generatedPrompt || this.generatedPromptDiv.textContent || '';
+        
+        if (!currentPrompt) {
+            this.showMessage('Aucun prompt à modifier', 'error');
+            return;
+        }
         
         const textarea = document.createElement('textarea');
+        textarea.className = 'prompt-editor';
         textarea.value = currentPrompt;
         textarea.style.width = '100%';
         textarea.style.minHeight = '200px';
@@ -300,17 +492,40 @@ class ImageGeneratorApp {
         textarea.style.padding = '1rem';
         textarea.style.border = '2px solid var(--primary-blue)';
         textarea.style.borderRadius = '8px';
+        textarea.style.backgroundColor = 'var(--white)';
+        textarea.style.color = 'var(--text-dark)';
+        textarea.style.resize = 'vertical';
 
         this.generatedPromptDiv.innerHTML = '';
         this.generatedPromptDiv.appendChild(textarea);
+        
+        // Focus sur le textarea
+        textarea.focus();
 
         // Changer le bouton en "Valider"
-        this.editPromptBtn.innerHTML = '<span class="btn-icon">✅</span> Valider';
+        this.editPromptBtn.innerHTML = '<span class="btn-icon">✅</span> Valider les modifications';
+        this.editPromptBtn.classList.add('btn-success');
         this.editPromptBtn.onclick = () => {
-            this.generatedPrompt = textarea.value;
-            this.displayPrompt(this.generatedPrompt);
+            const newPrompt = textarea.value.trim();
+            
+            if (!newPrompt) {
+                this.showMessage('Le prompt ne peut pas être vide', 'error');
+                return;
+            }
+            
+            // Mettre à jour le prompt
+            this.generatedPrompt = newPrompt;
+            
+            // Vider le textarea et remettre le texte
+            this.generatedPromptDiv.innerHTML = '';
+            this.generatedPromptDiv.textContent = newPrompt;
+            
+            // Restaurer le bouton
             this.editPromptBtn.innerHTML = '<span class="btn-icon">✏️</span> Modifier le prompt';
+            this.editPromptBtn.classList.remove('btn-success');
             this.editPromptBtn.onclick = () => this.handleEditPrompt();
+            
+            this.showMessage('✅ Prompt modifié avec succès !', 'success');
         };
     }
 
@@ -373,6 +588,11 @@ class ImageGeneratorApp {
         
         // Scroll vers la section
         this.resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        // Compléter l'étape 4 et ouvrir l'étape 5
+        if (typeof accordionManager !== 'undefined') {
+            accordionManager.completeStep(4);
+        }
     }
 
     async handleDownloadImage() {
@@ -444,11 +664,27 @@ class ImageGeneratorApp {
         selectedBtn.classList.add('active');
 
         const mode = selectedBtn.dataset.mode;
+        this.currentMode = mode;
 
-        // Afficher la section appropriée
-        this.manualSection.style.display = mode === 'manual' ? 'block' : 'none';
-        this.scanSection.style.display = mode === 'scan' ? 'block' : 'none';
-        this.csvSection.style.display = mode === 'csv' ? 'block' : 'none';
+        // Cacher tous les contenus de mode
+        this.manualContent.style.display = 'none';
+        this.scanContent.style.display = 'none';
+        this.csvContent.style.display = 'none';
+
+        // Afficher le contenu approprié
+        if (mode === 'manual') {
+            this.manualContent.style.display = 'block';
+        } else if (mode === 'scan') {
+            this.scanContent.style.display = 'block';
+        } else if (mode === 'csv') {
+            this.csvContent.style.display = 'block';
+        }
+
+        // Mettre à jour le titre/description de l'étape 3
+        accordionManager.updateStep3Content(mode);
+
+        // Compléter l'étape 1 et passer à l'étape 2
+        accordionManager.completeStep(1);
     }
 
     async handleScanUrl() {
@@ -953,7 +1189,409 @@ class ImageGeneratorApp {
         }
     }
 
+    // ==================== FONCTIONS STYLE SOURCE ====================
+
+    handleStyleSourceChange(selectedBtn) {
+        console.log('🎨 Style source changed');
+        
+        // Bloquer si le bouton est désactivé
+        if (selectedBtn.disabled || selectedBtn.classList.contains('disabled')) {
+            this.showMessage('⚠️ Cette fonctionnalité sera bientôt disponible', 'error');
+            return;
+        }
+        
+        // Update buttons
+        document.querySelectorAll('.style-source-btn').forEach(btn => btn.classList.remove('active'));
+        selectedBtn.classList.add('active');
+        
+        const source = selectedBtn.dataset.source;
+        this.currentStyleSource = source;
+        
+        // Update content visibility
+        document.querySelectorAll('.style-source-content').forEach(content => content.classList.remove('active'));
+        document.getElementById(source + 'Content').classList.add('active');
+        
+        console.log('✅ Active style source:', source);
+    }
+
+    async handleScanWebsiteStyle() {
+        const urlInput = document.getElementById('websiteStyleUrl');
+        const url = urlInput.value.trim();
+        
+        if (!url) {
+            this.showMessage('Veuillez entrer une URL', 'error');
+            return;
+        }
+        
+        // Validate URL
+        try {
+            new URL(url);
+        } catch (e) {
+            this.showMessage('URL invalide. Exemple: https://exemple.com', 'error');
+            return;
+        }
+        
+        try {
+            this.showLoading('Analyse du site web en cours...');
+            
+            // Call API to analyze website style
+            const response = await fetch('/api/analyze-website-style', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Erreur serveur: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Échec de l\'analyse');
+            }
+            
+            this.hideLoading();
+            
+            // Store the scanned style data
+            this.scannedStyleData = data.style;
+            this.scannedStyleUrl = url;
+            
+            // Display results
+            this.displayScanResults(url, data.style);
+            
+            this.showMessage('✅ Site analysé avec succès !', 'success');
+            
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error scanning website:', error);
+            this.showMessage('❌ Erreur lors de l\'analyse: ' + error.message, 'error');
+        }
+    }
+    
+    displayScanResults(url, style) {
+        const resultDiv = document.getElementById('websiteStyleResult');
+        const urlDisplay = resultDiv.querySelector('.scanned-url');
+        const colorsDiv = document.getElementById('scannedColors');
+        const fontsDiv = document.getElementById('scannedFonts');
+        const aestheticSpan = document.getElementById('scannedAesthetic');
+        const moodSpan = document.getElementById('scannedMood');
+        const compositionSpan = document.getElementById('scannedComposition');
+        
+        // URL
+        urlDisplay.textContent = url;
+        
+        // Colors
+        colorsDiv.innerHTML = '';
+        if (style.allColors && style.allColors.length > 0) {
+            style.allColors.forEach(color => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.backgroundColor = color;
+                swatch.setAttribute('data-color', color);
+                swatch.title = color;
+                colorsDiv.appendChild(swatch);
+            });
+        } else {
+            colorsDiv.innerHTML = '<p style="color: var(--text-gray);">Aucune couleur détectée</p>';
+        }
+        
+        // Fonts
+        fontsDiv.innerHTML = '';
+        if (style.allFonts && style.allFonts.length > 0) {
+            style.allFonts.forEach(font => {
+                const fontItem = document.createElement('div');
+                fontItem.className = 'font-item';
+                fontItem.textContent = font;
+                fontsDiv.appendChild(fontItem);
+            });
+        } else {
+            fontsDiv.innerHTML = '<p style="color: var(--text-gray);">Aucune police détectée</p>';
+        }
+        
+        // Aesthetic description
+        aestheticSpan.textContent = style.aesthetic || 'Non déterminé';
+        moodSpan.textContent = style.mood || 'Non déterminé';
+        compositionSpan.textContent = style.composition || 'Non déterminé';
+        
+        // Show result and setup confirm button
+        resultDiv.style.display = 'block';
+        
+        const confirmBtn = document.getElementById('confirmScanStyleBtn');
+        confirmBtn.onclick = () => this.confirmScannedStyle();
+    }
+    
+    confirmScannedStyle() {
+        if (!this.scannedStyleData) {
+            this.showMessage('Aucun style scanné disponible', 'error');
+            return;
+        }
+        
+        // Mark style as selected
+        this.selectedStyle = 'scanned-' + this.scannedStyleUrl;
+        
+        // Store the full style data for later use in prompt generation
+        this.customStyleData = this.scannedStyleData;
+        
+        // Configure prompt generator with custom style
+        promptGenerator.setStyle(this.selectedStyle);
+        promptGenerator.setCustomStyle(this.scannedStyleData);
+        
+        this.showMessage('✅ Style validé ! Passons à la suite', 'success');
+        
+        // Move to next step
+        accordionManager.completeStep(2);
+    }
+
+    handleStyleFilesUpload(event) {
+        const files = Array.from(event.target.files);
+        this.displayUploadedFiles(files);
+    }
+
+    handleStyleFilesDrop(event) {
+        const files = Array.from(event.dataTransfer.files);
+        this.displayUploadedFiles(files);
+    }
+
+    displayUploadedFiles(files) {
+        const preview = document.getElementById('uploadedFilesPreview');
+        const analyzeBtn = document.getElementById('analyzeUploadedStyleBtn');
+        
+        if (files.length === 0) return;
+        
+        preview.innerHTML = '<h4>Fichiers uploadés :</h4>';
+        files.forEach(file => {
+            const fileDiv = document.createElement('div');
+            fileDiv.style.cssText = 'padding: 0.75rem; background: var(--light-bg); border-radius: 8px; margin-bottom: 0.5rem;';
+            fileDiv.innerHTML = `
+                <strong>${file.name}</strong>
+                <span style="color: var(--text-gray); font-size: 0.875rem; margin-left: 1rem;">
+                    ${(file.size / 1024).toFixed(1)} KB
+                </span>
+            `;
+            preview.appendChild(fileDiv);
+        });
+        
+        preview.style.display = 'block';
+        analyzeBtn.style.display = 'block';
+        
+        analyzeBtn.onclick = () => this.handleAnalyzeUploadedStyle(files);
+    }
+
+    async handleAnalyzeUploadedStyle(files) {
+        try {
+            this.showLoading('Analyse du style des documents...');
+            
+            // TODO: Send files to API for analysis
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            this.hideLoading();
+            this.showMessage(`${files.length} fichier(s) analysé(s) avec succès ! (Fonction en développement)`, 'success');
+            
+            this.selectedStyle = 'upload-' + Date.now();
+            accordionManager.completeStep(2);
+            
+        } catch (error) {
+            this.hideLoading();
+            this.showMessage('Erreur lors de l\'analyse: ' + error.message, 'error');
+        }
+    }
+
+    async handleLibrarySearch() {
+        const searchInput = document.getElementById('librarySearchInput');
+        const query = searchInput.value.trim();
+        
+        if (!query) {
+            this.showMessage('Veuillez entrer un terme de recherche', 'error');
+            return;
+        }
+        
+        try {
+            this.showLoading(`🔍 Recherche sur ${this.currentLibrary.toUpperCase()}...`);
+            
+            // Appeler l'API
+            const response = await fetch('/api/search-library-images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    query,
+                    library: this.currentLibrary
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || `Erreur ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success || !data.results || data.results.length === 0) {
+                throw new Error('Aucune image trouvée');
+            }
+            
+            // Stocker les résultats
+            this.librarySearchResults = data.results;
+            
+            // Afficher les résultats
+            const resultsGrid = document.getElementById('libraryResultsGrid');
+            const resultsSection = document.getElementById('libraryResults');
+            
+            resultsGrid.innerHTML = '';
+            data.results.forEach((image, index) => {
+                const card = document.createElement('div');
+                card.className = 'library-image-card';
+                card.dataset.imageIndex = index;
+                card.innerHTML = `
+                    <img src="${image.thumb}" alt="${image.description}" />
+                    <div class="image-overlay">
+                        <span class="check-icon">✓</span>
+                    </div>
+                `;
+                card.onclick = () => this.toggleLibraryImage(card, index);
+                resultsGrid.appendChild(card);
+            });
+            
+            resultsSection.style.display = 'block';
+            document.getElementById('analyzeLibraryStyleBtn').style.display = 'block';
+            
+            this.hideLoading();
+            this.showMessage(`✅ ${data.results.length} images trouvées sur ${this.currentLibrary.toUpperCase()}`, 'success');
+            
+        } catch (error) {
+            this.hideLoading();
+            console.error('Library search error:', error);
+            this.showMessage('❌ Erreur lors de la recherche: ' + error.message, 'error');
+        }
+    }
+
+    toggleLibraryImage(card, imageId) {
+        card.classList.toggle('selected');
+        
+        if (card.classList.contains('selected')) {
+            this.selectedLibraryImages.push(imageId);
+        } else {
+            this.selectedLibraryImages = this.selectedLibraryImages.filter(id => id !== imageId);
+        }
+        
+        console.log('Selected images:', this.selectedLibraryImages);
+        
+        // Auto-select style when at least one image is selected
+        if (this.selectedLibraryImages.length > 0) {
+            const analyzeBtn = document.getElementById('analyzeLibraryStyleBtn');
+            analyzeBtn.onclick = () => this.handleAnalyzeLibraryStyle();
+            analyzeBtn.textContent = `✨ Utiliser ce style (${this.selectedLibraryImages.length} image(s))`;
+        }
+    }
+
+    async handleAnalyzeLibraryStyle() {
+        if (this.selectedLibraryImages.length === 0) {
+            this.showMessage('Veuillez sélectionner au moins une image', 'error');
+            return;
+        }
+        
+        try {
+            this.showLoading(`🎨 Analyse du style de ${this.selectedLibraryImages.length} image(s) avec GPT-4 Vision...`);
+            
+            // Récupérer les URLs des images sélectionnées
+            const imageUrls = this.selectedLibraryImages.map(index => {
+                return this.librarySearchResults[index].url;
+            });
+            
+            // Appeler l'API d'analyse
+            const response = await fetch('/api/analyze-library-style', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    imageUrls
+                })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || `Erreur ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success || !data.style) {
+                throw new Error('Échec de l\'analyse du style');
+            }
+            
+            this.hideLoading();
+            
+            // Stocker les données de style
+            this.customStyleData = data.style;
+            this.selectedStyle = 'library-' + this.currentLibrary + '-' + Date.now();
+            
+            // Configurer le générateur de prompt
+            promptGenerator.setStyle(this.selectedStyle);
+            promptGenerator.setCustomStyle(this.customStyleData);
+            
+            this.showMessage(`✅ Style extrait de ${this.selectedLibraryImages.length} image(s) !`, 'success');
+            
+            // Passer à l'étape suivante
+            accordionManager.completeStep(2);
+            
+        } catch (error) {
+            this.hideLoading();
+            console.error('Library style analysis error:', error);
+            this.showMessage('❌ Erreur lors de l\'analyse: ' + error.message, 'error');
+        }
+    }
+
     // ==================== FONCTIONS MODE CSV ====================
+
+    toggleCSVStep(stepNumber) {
+        const step = document.getElementById(`csvStep${stepNumber}`);
+        const isActive = step.classList.contains('active');
+        
+        if (!isActive) {
+            step.classList.add('active');
+        } else {
+            step.classList.remove('active');
+        }
+    }
+
+    openCSVStep(stepNumber) {
+        console.log(`🔄 Ouverture de l'étape ${stepNumber}`);
+        
+        // Fermer toutes les étapes
+        for (let i = 1; i <= 4; i++) {
+            const step = document.getElementById(`csvStep${i}`);
+            if (i === stepNumber) {
+                step.classList.add('active');
+                step.classList.remove('completed');
+            } else {
+                step.classList.remove('active');
+            }
+        }
+        
+        // Marquer les étapes précédentes comme complétées
+        for (let i = 1; i < stepNumber; i++) {
+            const prevStep = document.getElementById(`csvStep${i}`);
+            prevStep.classList.add('completed');
+            console.log(`✅ Étape ${i} marquée comme complétée`);
+        }
+        
+        // Scroll smooth vers l'étape avec un délai pour l'animation
+        setTimeout(() => {
+            const targetStep = document.getElementById(`csvStep${stepNumber}`);
+            targetStep.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+            });
+        }, 150);
+        
+        // Message dans la console pour debug
+        this.showMessage(`Étape ${stepNumber}/4 activée`, 'info');
+    }
 
     handleCSVFileUpload(event) {
         const file = event.target.files[0];
@@ -986,7 +1624,8 @@ class ImageGeneratorApp {
             // Afficher le tableau
             this.displayCSVTable(result);
 
-            this.csvPreview.style.display = 'block';
+            // Ouvrir l'étape 2
+            this.openCSVStep(2);
             this.showMessage(`CSV analysé : ${result.data.length} lignes, ${result.imageColumns.length} colonne(s) image`, 'success');
             
         } catch (error) {
@@ -1048,7 +1687,8 @@ class ImageGeneratorApp {
             this.displayCSVTasks(this.csvTasks);
             
             this.hideLoading();
-            this.csvImageTasks.style.display = 'block';
+            // Ouvrir l'étape 3
+            this.openCSVStep(3);
             this.showMessage(`${this.csvTasks.length} sujets générés par l'IA`, 'success');
             
         } catch (error) {
@@ -1160,6 +1800,8 @@ class ImageGeneratorApp {
             }
 
             this.hideLoading();
+            // Ouvrir l'étape 4
+            this.openCSVStep(4);
             this.showMessage(`${tasksToGenerate.length} images générées !`, 'success');
             this.refreshHistory();
 
