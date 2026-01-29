@@ -88,7 +88,7 @@ class PageScanner {
         
         semanticElements.forEach((element) => {
             const extracted = this.extractSectionData(element);
-            if (extracted && extracted.content.length > 50) {
+            if (extracted && extracted.content.length > 30) {
                 sections.push(extracted);
                 processedElements.add(element);
             }
@@ -112,7 +112,7 @@ class PageScanner {
                     elements.forEach(element => {
                         if (!processedElements.has(element)) {
                             const extracted = this.extractSectionData(element);
-                            if (extracted && extracted.content.length > 50) {
+                            if (extracted && extracted.content.length > 30) {
                                 sections.push(extracted);
                                 processedElements.add(element);
                             }
@@ -132,16 +132,35 @@ class PageScanner {
             console.log(`   → ${allDivs.length} divs trouvés`);
             
             let validDivs = 0;
+            let excludedByFilter = 0;
+            let tooShort = 0;
+            let alreadyProcessed = 0;
+            
             allDivs.forEach(div => {
-                if (!processedElements.has(div) && !this.isExcludedElement(div)) {
-                    const extracted = this.extractSectionData(div);
-                    if (extracted && extracted.content.length > 100) { // Seuil plus élevé pour les divs génériques
-                        sections.push(extracted);
-                        processedElements.add(div);
-                        validDivs++;
-                    }
+                if (processedElements.has(div)) {
+                    alreadyProcessed++;
+                    return;
                 }
+                
+                if (this.isExcludedElement(div)) {
+                    excludedByFilter++;
+                    return;
+                }
+                
+                const extracted = this.extractSectionData(div);
+                if (!extracted || extracted.content.length < 50) {
+                    tooShort++;
+                    return;
+                }
+                
+                sections.push(extracted);
+                processedElements.add(div);
+                validDivs++;
             });
+            
+            console.log(`   → Déjà traités: ${alreadyProcessed}`);
+            console.log(`   → Exclus (header/footer/nav): ${excludedByFilter}`);
+            console.log(`   → Contenu trop court (< 50 chars): ${tooShort}`);
             console.log(`✅ Étape 3 terminée: ${validDivs} divs valides ajoutés → ${sections.length} sections au total`);
         }
         
@@ -188,7 +207,8 @@ class PageScanner {
             .replace(/\s+/g, ' ') // Normaliser les espaces
             .substring(0, 500);
         
-        if (!textContent || textContent.length < 50) {
+        // Seuil minimal réduit à 30 caractères
+        if (!textContent || textContent.length < 30) {
             return null;
         }
         
