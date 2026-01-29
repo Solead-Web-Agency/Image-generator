@@ -19,6 +19,7 @@ class ImageGeneratorApp {
         this.scannedStyleData = null;
         this.scannedStyleUrl = null;
         this.customStyleData = null;
+        this.selectedSections = new Set(); // Track selected sections for page scanner
 
         this.initializeElements();
         this.attachEventListeners();
@@ -737,43 +738,138 @@ class ImageGeneratorApp {
             return;
         }
 
-        this.sectionsFound.innerHTML = '';
+        const sectionsGrid = document.getElementById('sectionsGrid');
+        const sectionsTotal = document.getElementById('sectionsTotal');
+        const sectionsSelected = document.getElementById('sectionsSelected');
+        const analyzeBtn = document.getElementById('analyzeSelectedBtn');
+        const analyzeCount = document.getElementById('analyzeCount');
+        
+        sectionsGrid.innerHTML = '';
+        this.selectedSections = new Set(); // Track selected sections
+        
+        // Update stats
+        sectionsTotal.textContent = `${sections.length} section${sections.length > 1 ? 's' : ''} trouvée${sections.length > 1 ? 's' : ''}`;
+        sectionsSelected.textContent = '0 sélectionnée';
+        analyzeBtn.disabled = true;
+        analyzeCount.textContent = '0';
         
         sections.forEach((section, index) => {
             const card = document.createElement('div');
             card.className = 'section-card';
+            card.dataset.index = index;
+            
             card.innerHTML = `
-                <h4>${section.title}</h4>
-                <div class="section-info">
-                    Section ${index + 1} • ${section.hasImage ? '✅ A déjà une image' : '❌ Pas d\'image'}
+                <div class="section-card-header">
+                    <input type="checkbox" class="section-checkbox" data-index="${index}">
+                    <h4 class="section-card-title">${section.title}</h4>
                 </div>
-                <div class="section-preview">${section.content.substring(0, 150)}...</div>
+                <div class="section-card-badges">
+                    <span class="section-badge ${section.hasImage ? 'has-image' : 'no-image'}">
+                        ${section.hasImage ? '✅ A déjà une image' : '🖼️ Sans image'}
+                    </span>
+                    <span class="section-badge">${section.element || 'section'}</span>
+                </div>
+                <p class="section-card-content">${section.content}</p>
+                <div class="section-card-meta">
+                    <span>Section ${index + 1}/${sections.length}</span>
+                    <span>${section.content.length} caractères</span>
+                </div>
             `;
-            this.sectionsFound.appendChild(card);
+            
+            // Handle checkbox change
+            const checkbox = card.querySelector('.section-checkbox');
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    card.classList.add('selected');
+                    this.selectedSections.add(index);
+                } else {
+                    card.classList.remove('selected');
+                    this.selectedSections.delete(index);
+                }
+                this.updateSectionSelection();
+            });
+            
+            // Click on card also toggles checkbox
+            card.addEventListener('click', (e) => {
+                if (e.target.type !== 'checkbox') {
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+            
+            sectionsGrid.appendChild(card);
         });
 
+        // Setup action buttons
+        document.getElementById('selectAllSectionsBtn').onclick = () => this.selectAllSections();
+        document.getElementById('deselectAllSectionsBtn').onclick = () => this.deselectAllSections();
+        analyzeBtn.onclick = () => this.handleAnalyzeSelectedSections();
+        
         this.scanResults.style.display = 'block';
     }
+    
+    updateSectionSelection() {
+        const sectionsSelected = document.getElementById('sectionsSelected');
+        const analyzeBtn = document.getElementById('analyzeSelectedBtn');
+        const analyzeCount = document.getElementById('analyzeCount');
+        
+        const count = this.selectedSections.size;
+        sectionsSelected.textContent = `${count} sélectionnée${count > 1 ? 's' : ''}`;
+        analyzeCount.textContent = count;
+        analyzeBtn.disabled = count === 0;
+    }
+    
+    selectAllSections() {
+        const checkboxes = document.querySelectorAll('.section-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+            cb.dispatchEvent(new Event('change'));
+        });
+    }
+    
+    deselectAllSections() {
+        const checkboxes = document.querySelectorAll('.section-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = false;
+            cb.dispatchEvent(new Event('change'));
+        });
+    }
 
-    async handleAnalyzeWithAI() {
+    async handleAnalyzeSelectedSections() {
         if (!this.apiKey) {
             this.showMessage('Veuillez configurer votre clé API OpenAI', 'error');
             return;
         }
 
         if (!this.selectedStyle) {
-            this.showMessage('Veuillez d\'abord sélectionner un style visuel (dans la section "Création manuelle")', 'error');
+            this.showMessage('Veuillez d\'abord sélectionner un style visuel (Étape 2)', 'error');
+            return;
+        }
+        
+        if (!this.selectedSections || this.selectedSections.size === 0) {
+            this.showMessage('Veuillez cocher au moins une section', 'error');
             return;
         }
 
         try {
-            this.showLoading('Analyse intelligente avec l\'IA...');
-            const suggestions = await pageScanner.analyzeSectionsWithAI(this.apiKey, this.selectedStyle);
+            this.showLoading(`🤖 Analyse de ${this.selectedSections.size} section(s) avec l'IA...`);
+            
+            // Get only selected sections
+            const allSections = pageScanner.getScannedContent();
+            const selectedSectionsData = Array.from(this.selectedSections).map(index => allSections[index]);
+            
+            // Analyze with AI
+            const suggestions = await pageScanner.analyzeSpecificSections(
+                selectedSectionsData, 
+                this.apiKey, 
+                this.selectedStyle
+            );
+            
             this.displaySuggestions(suggestions);
-            this.showMessage(`${suggestions.length} suggestion(s) générée(s) !`, 'success');
+            this.showMessage(`✅ ${suggestions.length} sujet${suggestions.length > 1 ? 's' : ''} d'image généré${suggestions.length > 1 ? 's' : ''} !`, 'success');
         } catch (error) {
             console.error('Error analyzing with AI:', error);
-            this.showMessage(`Erreur: ${error.message}`, 'error');
+            this.showMessage(`❌ Erreur: ${error.message}`, 'error');
         } finally {
             this.hideLoading();
         }

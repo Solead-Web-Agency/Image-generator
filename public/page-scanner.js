@@ -168,6 +168,87 @@ Retourne UNIQUEMENT le JSON, sans texte avant ou après.`;
     }
 
     /**
+     * Analyser UNIQUEMENT les sections spécifiées (nouvelle méthode simplifiée)
+     */
+    async analyzeSpecificSections(selectedSections, apiKey, selectedStyle) {
+        if (!selectedSections || selectedSections.length === 0) {
+            throw new Error('Aucune section fournie pour l\'analyse');
+        }
+
+        if (!apiKey) {
+            throw new Error('Clé API OpenAI requise');
+        }
+
+        const styleData = getStyleData(selectedStyle);
+        const styleName = this.getStyleName(selectedStyle);
+
+        const systemMessage = `Tu es un expert en Direction Artistique. 
+Ton rôle est d'analyser des sections de contenu web et de suggérer des sujets d'images pertinents pour illustrer chaque section.
+Style visuel à respecter : ${styleName}`;
+
+        const userMessage = `Analyse ces ${selectedSections.length} sections et suggère un sujet d'image pertinent pour CHAQUE section.
+
+Style visuel : ${styleName}
+Description : ${styleData?.style_global?.aesthetic || 'Moderne et professionnel'}
+
+Sections à illustrer :
+${selectedSections.map((section, i) => `
+Section ${i + 1}: "${section.title}"
+Contenu : ${section.content.substring(0, 300)}...
+A déjà une image : ${section.hasImage ? 'Oui' : 'Non'}
+`).join('\n')}
+
+Pour CHAQUE section, retourne un JSON au format :
+{
+  "suggestions": [
+    {
+      "sectionIndex": 0,
+      "sectionTitle": "Titre exact de la section",
+      "imageSubject": "Description détaillée du sujet d'image à générer",
+      "reason": "Courte explication de pourquoi cette image",
+      "priority": "high|medium|low"
+    }
+  ]
+}
+
+Retourne UNIQUEMENT le JSON, sans texte avant ou après.`;
+
+        try {
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o',
+                    messages: [
+                        { role: 'system', content: systemMessage },
+                        { role: 'user', content: userMessage }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 2000,
+                    response_format: { type: "json_object" }
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'Erreur lors de l\'analyse IA');
+            }
+
+            const data = await response.json();
+            const result = JSON.parse(data.choices[0].message.content);
+            
+            this.suggestions = result.suggestions || [];
+            return this.suggestions;
+        } catch (error) {
+            console.error('Error analyzing with AI:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Obtenir le nom du style
      */
     getStyleName(styleVersion) {
