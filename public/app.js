@@ -762,13 +762,6 @@ class ImageGeneratorApp {
                     <input type="checkbox" class="section-checkbox" data-index="${index}">
                     <h4 class="section-card-title">${section.title}</h4>
                 </div>
-                ${section.imageUrls && section.imageUrls.length > 0 ? `
-                    <div class="section-card-thumbnail">
-                        <img src="${section.imageUrls[0]}" alt="Aperçu" loading="lazy" 
-                             onerror="this.parentElement.innerHTML='<div class=\\'thumbnail-error\\'>❌ Aperçu indisponible</div>'" />
-                        ${section.imageUrls.length > 1 ? `<span class="thumbnail-badge">+${section.imageUrls.length - 1}</span>` : ''}
-                    </div>
-                ` : ''}
                 <div class="section-card-badges">
                     <span class="section-badge ${section.hasImage ? 'has-image' : 'no-image'}">
                         ${section.hasImage ? '✅ A déjà une image' : '🖼️ Sans image'}
@@ -781,8 +774,8 @@ class ImageGeneratorApp {
                     <span>${section.content.length} caractères</span>
                 </div>
                 <div class="section-card-actions">
-                    <button class="btn-preview-action" data-index="${index}" title="Voir le contenu complet et les images">
-                        ${section.imageUrls && section.imageUrls.length > 0 ? '👁️ Aperçu complet' : '📄 Contenu'}
+                    <button class="btn-preview-action" data-index="${index}" title="Voir l'aperçu de la section">
+                        👁️ Aperçu
                     </button>
                 </div>
             `;
@@ -854,59 +847,109 @@ class ImageGeneratorApp {
     }
     
     showSectionPreview(section, sectionNumber) {
+        const scannedUrl = pageScanner.scannedUrl;
+        
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-content modal-content-large">
                 <div class="modal-header">
-                    <h3>📄 Section ${sectionNumber}: ${section.title}</h3>
+                    <h3>👁️ Aperçu: ${section.title}</h3>
                     <button class="modal-close">✕</button>
                 </div>
                 <div class="modal-body">
                     <div class="section-preview-modal">
                         <div class="section-meta-info">
+                            <span class="meta-badge">Section ${sectionNumber}</span>
                             <span class="meta-badge">
                                 ${section.hasImage ? '✅ A déjà une image' : '🖼️ Sans image'}
                             </span>
                             <span class="meta-badge">${section.element || 'section'}</span>
                             <span class="meta-badge">${section.content.length} caractères</span>
-                            ${section.classes ? `<span class="meta-badge">Classes: ${section.classes}</span>` : ''}
                         </div>
                         
-                        ${section.imageUrls && section.imageUrls.length > 0 ? `
-                            <div class="section-images-preview">
-                                <h4 style="margin-bottom: 1rem; color: var(--primary-blue);">
-                                    📸 Aperçu visuel (${section.imageUrls.length} image${section.imageUrls.length > 1 ? 's' : ''}) :
-                                </h4>
-                                <div class="preview-images-grid">
-                                    ${section.imageUrls.map(url => `
-                                        <div class="preview-image-wrapper">
-                                            <img src="${url}" alt="Image de la section" loading="lazy" 
-                                                 onerror="this.parentElement.innerHTML='<div class=\\'image-error\\'>❌ Image non chargée</div>'" />
-                                        </div>
-                                    `).join('')}
+                        ${scannedUrl ? `
+                            <div class="iframe-preview-container">
+                                <div class="iframe-toolbar">
+                                    <span style="font-size: 0.875rem; color: var(--text-gray);">
+                                        📄 Aperçu de la page complète (la section est dans cette page)
+                                    </span>
+                                    <a href="${scannedUrl}" target="_blank" class="btn-secondary" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
+                                        🔗 Ouvrir dans un nouvel onglet
+                                    </a>
+                                </div>
+                                <div class="iframe-wrapper">
+                                    <iframe 
+                                        src="${scannedUrl}" 
+                                        id="previewIframe"
+                                        sandbox="allow-same-origin allow-scripts"
+                                        loading="lazy"
+                                        title="Aperçu de la page">
+                                    </iframe>
+                                    <div class="iframe-loading" id="iframeLoading">
+                                        <div class="spinner"></div>
+                                        <p>Chargement de l'aperçu...</p>
+                                    </div>
+                                    <div class="iframe-error" id="iframeError" style="display: none;">
+                                        <p style="margin: 0 0 1rem 0;">⚠️ Impossible d'afficher l'aperçu</p>
+                                        <p style="font-size: 0.875rem; color: var(--text-gray); margin: 0;">
+                                            Le site bloque l'affichage en iframe (sécurité X-Frame-Options).
+                                        </p>
+                                        <a href="${scannedUrl}" target="_blank" class="btn-primary" style="margin-top: 1rem;">
+                                            🔗 Ouvrir la page dans un nouvel onglet
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         ` : ''}
                         
-                        <div class="section-full-content">
-                            <h4 style="margin-bottom: 1rem; color: var(--primary-blue);">📄 Contenu complet :</h4>
+                        <div class="section-full-content" style="margin-top: 2rem;">
+                            <h4 style="margin-bottom: 1rem; color: var(--primary-blue);">📄 Contenu de cette section :</h4>
                             <div style="background: var(--light-bg); padding: 1.5rem; border-radius: 8px; line-height: 1.8; color: var(--text-dark);">
                                 ${section.content}
                             </div>
                         </div>
-                        
-                        ${section.imageCount > 0 && (!section.imageUrls || section.imageUrls.length === 0) ? `
-                            <div style="margin-top: 1.5rem; padding: 1rem; background: #FEF3C7; border-radius: 8px; border: 1px solid #FDE68A;">
-                                <strong style="color: #A16207;">⚠️ ${section.imageCount} image${section.imageCount > 1 ? 's' : ''} détectée${section.imageCount > 1 ? 's' : ''} mais URL(s) non disponible${section.imageCount > 1 ? 's' : ''}</strong>
-                            </div>
-                        ` : ''}
                     </div>
                 </div>
             </div>
         `;
         
         document.body.appendChild(modal);
+        
+        // Setup iframe loading/error handling
+        if (scannedUrl) {
+            const iframe = modal.querySelector('#previewIframe');
+            const loading = modal.querySelector('#iframeLoading');
+            const error = modal.querySelector('#iframeError');
+            
+            // Timeout pour détecter les erreurs
+            const timeout = setTimeout(() => {
+                loading.style.display = 'none';
+                error.style.display = 'flex';
+            }, 10000); // 10 secondes
+            
+            iframe.addEventListener('load', () => {
+                clearTimeout(timeout);
+                loading.style.display = 'none';
+                
+                // Vérifier si l'iframe est vraiment chargée ou bloquée
+                try {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (!iframeDoc || iframeDoc.body.children.length === 0) {
+                        throw new Error('Blocked');
+                    }
+                } catch (e) {
+                    // CORS ou X-Frame-Options bloque l'accès
+                    error.style.display = 'flex';
+                }
+            });
+            
+            iframe.addEventListener('error', () => {
+                clearTimeout(timeout);
+                loading.style.display = 'none';
+                error.style.display = 'flex';
+            });
+        }
         
         // Close modal
         modal.querySelector('.modal-close').addEventListener('click', () => {

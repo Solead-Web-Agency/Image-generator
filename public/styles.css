@@ -2305,45 +2305,6 @@ footer {
     line-height: 1.4;
 }
 
-.section-card-thumbnail {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16/9;
-    margin: 0.75rem 0;
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--light-bg);
-    border: 1px solid var(--border-color);
-}
-
-.section-card-thumbnail img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.section-card-thumbnail .thumbnail-error {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    font-size: 0.75rem;
-    color: var(--text-gray);
-    text-align: center;
-}
-
-.section-card-thumbnail .thumbnail-badge {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: rgba(0, 0, 0, 0.75);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
 .section-card-badges {
     display: flex;
     gap: 0.5rem;
@@ -2445,55 +2406,97 @@ footer {
     margin-top: 1rem;
 }
 
-/* Section Images Preview in Modal */
-.section-images-preview {
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    background: white;
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
+/* Modal Large for iframe preview */
+.modal-content-large {
+    max-width: 95vw;
+    max-height: 90vh;
+    width: 1400px;
 }
 
-.preview-images-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+.modal-content-large .modal-body {
+    max-height: calc(90vh - 80px);
+    overflow-y: auto;
+}
+
+/* Iframe Preview Container */
+.iframe-preview-container {
+    margin-bottom: 2rem;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    background: white;
+}
+
+.iframe-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--light-bg);
+    border-bottom: 1px solid var(--border-color);
     gap: 1rem;
 }
 
-.preview-image-wrapper {
+.iframe-wrapper {
     position: relative;
-    aspect-ratio: 16/9;
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--light-bg);
-    border: 1px solid var(--border-color);
+    width: 100%;
+    height: 600px;
+    background: white;
 }
 
-.preview-image-wrapper img {
+.iframe-wrapper iframe {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
+    border: none;
 }
 
-.preview-image-wrapper:hover img {
-    transform: scale(1.05);
-}
-
-.preview-image-wrapper .image-error {
+.iframe-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    background: white;
+    z-index: 10;
+}
+
+.iframe-loading p {
+    margin-top: 1rem;
+    color: var(--text-gray);
+}
+
+.iframe-error {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
     height: 100%;
-    font-size: 0.875rem;
-    color: var(--error-red);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--light-bg);
+    padding: 2rem;
     text-align: center;
-    padding: 1rem;
+    z-index: 10;
 }
 
 @media (max-width: 768px) {
-    .preview-images-grid {
-        grid-template-columns: 1fr;
+    .modal-content-large {
+        width: 95vw;
+    }
+    
+    .iframe-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .iframe-wrapper {
+        height: 400px;
     }
 }
 

@@ -4,6 +4,7 @@ class PageScanner {
     constructor() {
         this.scannedContent = null;
         this.suggestions = [];
+        this.scannedUrl = null;
     }
 
     /**
@@ -11,6 +12,9 @@ class PageScanner {
      */
     async scanURL(url) {
         try {
+            // Store the scanned URL for iframe preview
+            this.scannedUrl = url;
+            
             // Pour éviter les problèmes CORS, on utilise un proxy ou on demande le HTML directement
             const response = await fetch(url);
             const html = await response.text();
@@ -19,8 +23,8 @@ class PageScanner {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             
-            // Extraire le contenu structuré
-            this.scannedContent = this.extractContent(doc);
+            // Extraire le contenu structuré (avec l'URL de base pour les images)
+            this.scannedContent = this.extractContent(doc, url);
             
             return this.scannedContent;
         } catch (error) {
