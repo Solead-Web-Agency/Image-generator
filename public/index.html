@@ -366,22 +366,52 @@
                                 </button>
                             </div>
                         
+                            <!-- Sections détectées après scan -->
                             <div id="scanResults" style="display: none; margin-top: 2rem;">
-                                <h3>Sections détectées</h3>
-                                <div id="sectionsFound"></div>
-                                <button id="analyzeWithAIBtn" class="btn-primary" style="margin-top: 1rem;">
-                                    <span class="btn-icon">🤖</span>
-                                    Analyser avec l'IA
-                                </button>
+                                <div class="result-header" style="margin-bottom: 1.5rem;">
+                                    <h3 style="margin: 0 0 0.5rem 0;">📋 Sections détectées sur la page</h3>
+                                    <p style="margin: 0; color: var(--text-gray); font-size: 0.95rem;">
+                                        Cochez les sections pour lesquelles vous souhaitez générer des images
+                                    </p>
+                                    <div class="sections-stats" style="margin-top: 1rem; display: flex; gap: 1rem;">
+                                        <span class="stat-badge" id="sectionsTotal">0 sections trouvées</span>
+                                        <span class="stat-badge" id="sectionsSelected">0 sélectionnées</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="sections-grid" id="sectionsGrid">
+                                    <!-- Les sections seront affichées ici -->
+                                </div>
+                                
+                                <div class="actions-bar" style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center;">
+                                    <button id="selectAllSectionsBtn" class="btn-secondary">
+                                        <span class="btn-icon">☑️</span>
+                                        Tout sélectionner
+                                    </button>
+                                    <button id="deselectAllSectionsBtn" class="btn-secondary">
+                                        <span class="btn-icon">⬜</span>
+                                        Tout désélectionner
+                                    </button>
+                                    <button id="analyzeSelectedBtn" class="btn-primary btn-large" style="margin-left: auto;" disabled>
+                                        <span class="btn-icon">🤖</span>
+                                        Analyser les sections sélectionnées (<span id="analyzeCount">0</span>)
+                                    </button>
+                                </div>
                             </div>
                             
+                            <!-- Suggestions d'images après analyse -->
                             <div id="imageSuggestions" style="display: none; margin-top: 2rem;">
-                                <h3>Suggestions d'images</h3>
+                                <div class="result-header" style="margin-bottom: 1.5rem;">
+                                    <h3 style="margin: 0 0 0.5rem 0;">✨ Sujets d'images suggérés par l'IA</h3>
+                                    <p style="margin: 0; color: var(--text-gray); font-size: 0.95rem;">
+                                        L'IA a analysé vos sections et proposé des sujets d'images pertinents
+                                    </p>
+                                </div>
                                 <div id="suggestionsContainer"></div>
                                 <div style="margin-top: 1.5rem;">
-                                    <button id="generateAllBtn" class="btn-primary">
+                                    <button id="generateAllBtn" class="btn-primary btn-large">
                                         <span class="btn-icon">🎨</span>
-                                        Générer toutes les images sélectionnées
+                                        Générer toutes les images cochées
                                     </button>
                                 </div>
                             </div>
