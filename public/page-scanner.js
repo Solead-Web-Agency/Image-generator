@@ -15,21 +15,38 @@ class PageScanner {
             // Store the scanned URL for iframe preview
             this.scannedUrl = url;
             
-            // Pour éviter les problèmes CORS, on utilise un proxy ou on demande le HTML directement
-            const response = await fetch(url);
-            const html = await response.text();
+            // Utiliser l'API backend pour contourner les problèmes CORS
+            const response = await fetch('/api/scan-page-content', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Erreur lors du scan');
+            }
+
+            const data = await response.json();
+            const html = data.html;
+            
+            console.log(`✅ HTML reçu: ${html.length} caractères`);
             
             // Parser le HTML
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             
-            // Extraire le contenu structuré (avec l'URL de base pour les images)
-            this.scannedContent = this.extractContent(doc, url);
+            // Extraire le contenu structuré
+            this.scannedContent = this.extractContent(doc);
+            
+            console.log(`✅ ${this.scannedContent.length} sections détectées`);
             
             return this.scannedContent;
         } catch (error) {
-            console.error('Error scanning URL:', error);
-            throw new Error('Impossible de scanner cette URL. Vérifiez qu\'elle est accessible et que CORS est activé.');
+            console.error('❌ Error scanning URL:', error);
+            throw new Error(`Impossible de scanner cette URL: ${error.message}`);
         }
     }
 
