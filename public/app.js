@@ -51,8 +51,7 @@ class ImageGeneratorApp {
         this.scanUrlBtn = document.getElementById('scanUrlBtn');
         this.scanHtmlBtn = document.getElementById('scanHtmlBtn');
         this.scanResults = document.getElementById('scanResults');
-        this.sectionsFound = document.getElementById('sectionsFound');
-        this.analyzeWithAIBtn = document.getElementById('analyzeWithAIBtn');
+        this.sectionsGrid = document.getElementById('sectionsGrid'); // Updated for new UI
         this.imageSuggestions = document.getElementById('imageSuggestions');
         this.suggestionsContainer = document.getElementById('suggestionsContainer');
         this.generateAllBtn = document.getElementById('generateAllBtn');
@@ -146,7 +145,7 @@ class ImageGeneratorApp {
         // Scan buttons
         this.scanUrlBtn.addEventListener('click', () => this.handleScanUrl());
         this.scanHtmlBtn.addEventListener('click', () => this.handleScanHtml());
-        this.analyzeWithAIBtn.addEventListener('click', () => this.handleAnalyzeWithAI());
+        // Note: analyzeSelectedBtn is now attached dynamically in displayScannedSections()
         this.generateAllBtn.addEventListener('click', () => this.handleGenerateAll());
         
         // CSV buttons
