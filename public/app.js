@@ -773,6 +773,11 @@ class ImageGeneratorApp {
                     <span>Section ${index + 1}/${sections.length}</span>
                     <span>${section.content.length} caractères</span>
                 </div>
+                <div class="section-card-actions">
+                    <button class="btn-preview-action" data-index="${index}" title="Voir le contenu complet">
+                        📄 Contenu
+                    </button>
+                </div>
             `;
             
             // Handle checkbox change
@@ -788,12 +793,19 @@ class ImageGeneratorApp {
                 this.updateSectionSelection();
             });
             
-            // Click on card also toggles checkbox
+            // Click on card also toggles checkbox (but not on action buttons)
             card.addEventListener('click', (e) => {
-                if (e.target.type !== 'checkbox') {
+                if (e.target.type !== 'checkbox' && !e.target.classList.contains('btn-preview-action')) {
                     checkbox.checked = !checkbox.checked;
                     checkbox.dispatchEvent(new Event('change'));
                 }
+            });
+            
+            // Preview content button
+            const previewBtn = card.querySelector('.btn-preview-action');
+            previewBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.showSectionPreview(section, index + 1);
             });
             
             sectionsGrid.appendChild(card);
@@ -831,6 +843,57 @@ class ImageGeneratorApp {
         checkboxes.forEach(cb => {
             cb.checked = false;
             cb.dispatchEvent(new Event('change'));
+        });
+    }
+    
+    showSectionPreview(section, sectionNumber) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3>📄 Section ${sectionNumber}: ${section.title}</h3>
+                    <button class="modal-close">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="section-preview-modal">
+                        <div class="section-meta-info">
+                            <span class="meta-badge">
+                                ${section.hasImage ? '✅ A déjà une image' : '🖼️ Sans image'}
+                            </span>
+                            <span class="meta-badge">${section.element || 'section'}</span>
+                            <span class="meta-badge">${section.content.length} caractères</span>
+                            ${section.classes ? `<span class="meta-badge">Classes: ${section.classes}</span>` : ''}
+                        </div>
+                        
+                        <div class="section-full-content">
+                            <h4 style="margin-bottom: 1rem; color: var(--primary-blue);">Contenu complet :</h4>
+                            <div style="background: var(--light-bg); padding: 1.5rem; border-radius: 8px; line-height: 1.8; color: var(--text-dark);">
+                                ${section.content}
+                            </div>
+                        </div>
+                        
+                        ${section.imageCount > 0 ? `
+                            <div style="margin-top: 1.5rem; padding: 1rem; background: #DCFCE7; border-radius: 8px; border: 1px solid #BBF7D0;">
+                                <strong style="color: #15803D;">📸 ${section.imageCount} image${section.imageCount > 1 ? 's' : ''} déjà présente${section.imageCount > 1 ? 's' : ''} dans cette section</strong>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Close modal
+        modal.querySelector('.modal-close').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
         });
     }
 

@@ -2356,6 +2356,56 @@ footer {
     color: var(--text-gray);
 }
 
+.section-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.btn-preview-action {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-dark);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.btn-preview-action:hover {
+    background: var(--light-bg);
+    border-color: var(--primary-blue);
+    color: var(--primary-blue);
+    transform: translateY(-2px);
+}
+
+.section-preview-modal .section-meta-info {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.section-preview-modal .meta-badge {
+    padding: 0.4rem 0.75rem;
+    background: var(--light-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    color: var(--text-gray);
+}
+
+.section-full-content {
+    margin-top: 1rem;
+}
+
 .actions-bar {
     display: flex;
     gap: 1rem;
