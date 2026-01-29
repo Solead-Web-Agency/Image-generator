@@ -55,12 +55,19 @@ class PageScanner {
      */
     scanText(htmlText) {
         try {
+            // Pas d'URL pour le scan manuel
+            this.scannedUrl = null;
+            
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
+            
+            console.log('📄 HTML parsé, extraction en cours...');
             this.scannedContent = this.extractContent(doc);
+            console.log(`✅ ${this.scannedContent.length} sections extraites`);
+            
             return this.scannedContent;
         } catch (error) {
-            console.error('Error scanning text:', error);
+            console.error('❌ Error scanning text:', error);
             throw new Error('Erreur lors de l\'analyse du contenu');
         }
     }
@@ -70,11 +77,14 @@ class PageScanner {
      * Approche ULTRA FLEXIBLE qui fonctionne avec n'importe quelle structure
      */
     extractContent(doc) {
+        console.log('🔍 [extractContent] Début extraction...');
+        
         const sections = [];
         const processedElements = new Set(); // Éviter les doublons
         
         // Étape 1: Chercher les éléments sémantiques classiques
         const semanticElements = doc.querySelectorAll('section, article, aside, [role="region"]');
+        console.log(`📌 Étape 1: ${semanticElements.length} éléments sémantiques trouvés`);
         
         semanticElements.forEach((element) => {
             const extracted = this.extractSectionData(element);
@@ -84,8 +94,11 @@ class PageScanner {
             }
         });
         
+        console.log(`✅ Étape 1 terminée: ${sections.length} sections valides`);
+        
         // Étape 2: Si peu de résultats, chercher dans main, divs avec classes significatives
         if (sections.length < 3) {
+            console.log(`📌 Étape 2: Moins de 3 sections, élargissement de la recherche...`);
             const contentSelectors = [
                 'main section', 'main article', 'main > div',
                 '[class*="content"]', '[class*="section"]', '[class*="block"]',
@@ -109,30 +122,40 @@ class PageScanner {
                     // Selector invalide, on skip
                 }
             });
+            console.log(`✅ Étape 2 terminée: ${sections.length} sections au total`);
         }
         
         // Étape 3: Si toujours peu de résultats, analyser TOUS les div avec du contenu significatif
         if (sections.length < 3) {
+            console.log(`📌 Étape 3: Analyse de TOUS les divs...`);
             const allDivs = doc.querySelectorAll('div');
+            console.log(`   → ${allDivs.length} divs trouvés`);
+            
+            let validDivs = 0;
             allDivs.forEach(div => {
                 if (!processedElements.has(div) && !this.isExcludedElement(div)) {
                     const extracted = this.extractSectionData(div);
                     if (extracted && extracted.content.length > 100) { // Seuil plus élevé pour les divs génériques
                         sections.push(extracted);
                         processedElements.add(div);
+                        validDivs++;
                     }
                 }
             });
+            console.log(`✅ Étape 3 terminée: ${validDivs} divs valides ajoutés → ${sections.length} sections au total`);
         }
         
         // Limiter à max 50 sections et trier par pertinence (longueur de contenu)
-        return sections
+        const finalSections = sections
             .sort((a, b) => b.content.length - a.content.length)
             .slice(0, 50)
             .map((section, index) => ({
                 ...section,
                 index: index
             }));
+        
+        console.log(`🎯 [extractContent] RÉSULTAT FINAL: ${finalSections.length} sections retournées`);
+        return finalSections;
     }
     
     /**
