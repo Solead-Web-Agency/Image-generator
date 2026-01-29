@@ -50,45 +50,146 @@ class PageScanner {
 
     /**
      * Extraire le contenu structuré d'un document HTML
+     * Approche ULTRA FLEXIBLE qui fonctionne avec n'importe quelle structure
      */
     extractContent(doc) {
         const sections = [];
+        const processedElements = new Set(); // Éviter les doublons
         
-        // Récupérer toutes les sections, articles, ou div principales
-        const elements = doc.querySelectorAll('section, article, .section, main > div, [class*="content"]');
+        // Étape 1: Chercher les éléments sémantiques classiques
+        const semanticElements = doc.querySelectorAll('section, article, aside, [role="region"]');
         
-        elements.forEach((element, index) => {
-            const heading = element.querySelector('h1, h2, h3, h4');
-            const paragraphs = element.querySelectorAll('p');
-            const images = element.querySelectorAll('img');
-            
-            const textContent = Array.from(paragraphs)
-                .map(p => p.textContent.trim())
-                .filter(text => text.length > 20)
-                .join(' ')
-                .substring(0, 500); // Limiter à 500 caractères
-            
-            // Extraire les URLs des images
-            const imageUrls = Array.from(images)
-                .map(img => img.src || img.dataset.src || img.getAttribute('data-lazy-src'))
-                .filter(url => url && url.startsWith('http'))
-                .slice(0, 5); // Max 5 images par section
-            
-            if (textContent) {
-                sections.push({
-                    index: index,
-                    title: heading ? heading.textContent.trim() : `Section ${index + 1}`,
-                    content: textContent,
-                    hasImage: images.length > 0,
-                    imageCount: images.length,
-                    imageUrls: imageUrls,
-                    element: element.tagName,
-                    classes: element.className
-                });
+        semanticElements.forEach((element) => {
+            const extracted = this.extractSectionData(element);
+            if (extracted && extracted.content.length > 50) {
+                sections.push(extracted);
+                processedElements.add(element);
             }
         });
-
-        return sections;
+        
+        // Étape 2: Si peu de résultats, chercher dans main, divs avec classes significatives
+        if (sections.length < 3) {
+            const contentSelectors = [
+                'main section', 'main article', 'main > div',
+                '[class*="content"]', '[class*="section"]', '[class*="block"]',
+                '[class*="container"] > div', '[class*="wrapper"] > div',
+                '[id*="content"]', '[id*="main"]'
+            ];
+            
+            contentSelectors.forEach(selector => {
+                try {
+                    const elements = doc.querySelectorAll(selector);
+                    elements.forEach(element => {
+                        if (!processedElements.has(element)) {
+                            const extracted = this.extractSectionData(element);
+                            if (extracted && extracted.content.length > 50) {
+                                sections.push(extracted);
+                                processedElements.add(element);
+                            }
+                        }
+                    });
+                } catch (e) {
+                    // Selector invalide, on skip
+                }
+            });
+        }
+        
+        // Étape 3: Si toujours peu de résultats, analyser TOUS les div avec du contenu significatif
+        if (sections.length < 3) {
+            const allDivs = doc.querySelectorAll('div');
+            allDivs.forEach(div => {
+                if (!processedElements.has(div) && !this.isExcludedElement(div)) {
+                    const extracted = this.extractSectionData(div);
+                    if (extracted && extracted.content.length > 100) { // Seuil plus élevé pour les divs génériques
+                        sections.push(extracted);
+                        processedElements.add(div);
+                    }
+                }
+            });
+        }
+        
+        // Limiter à max 50 sections et trier par pertinence (longueur de contenu)
+        return sections
+            .sort((a, b) => b.content.length - a.content.length)
+            .slice(0, 50)
+            .map((section, index) => ({
+                ...section,
+                index: index
+            }));
+    }
+    
+    /**
+     * Extraire les données d'une section/élément
+     */
+    extractSectionData(element) {
+        // Skip si l'élément est vide ou caché
+        if (!element || element.offsetParent === null) {
+            return null;
+        }
+        
+        const heading = element.querySelector('h1, h2, h3, h4, h5, h6');
+        const paragraphs = element.querySelectorAll('p');
+        const images = element.querySelectorAll('img');
+        
+        // Extraire le texte (paragraphes OU texte direct si pas de paragraphes)
+        let textContent = '';
+        if (paragraphs.length > 0) {
+            textContent = Array.from(paragraphs)
+                .map(p => p.textContent.trim())
+                .filter(text => text.length > 20)
+                .join(' ');
+        } else {
+            // Fallback: prendre tout le texte de l'élément
+            textContent = element.textContent.trim();
+        }
+        
+        // Nettoyer et limiter
+        textContent = textContent
+            .replace(/\s+/g, ' ') // Normaliser les espaces
+            .substring(0, 500);
+        
+        if (!textContent || textContent.length < 50) {
+            return null;
+        }
+        
+        return {
+            title: heading ? heading.textContent.trim() : this.extractTitleFromContent(textContent),
+            content: textContent,
+            hasImage: images.length > 0,
+            imageCount: images.length,
+            element: element.tagName.toLowerCase(),
+            classes: element.className || ''
+        };
+    }
+    
+    /**
+     * Vérifier si un élément doit être exclu (header, footer, nav, etc.)
+     */
+    isExcludedElement(element) {
+        const tagName = element.tagName.toLowerCase();
+        const className = element.className.toLowerCase();
+        const id = element.id.toLowerCase();
+        
+        // Tags à exclure
+        const excludedTags = ['header', 'footer', 'nav', 'aside', 'script', 'style', 'noscript'];
+        if (excludedTags.includes(tagName)) {
+            return true;
+        }
+        
+        // Classes/IDs à exclure
+        const excludedKeywords = ['header', 'footer', 'nav', 'menu', 'sidebar', 'cookie', 'modal', 'popup'];
+        return excludedKeywords.some(keyword => 
+            className.includes(keyword) || id.includes(keyword)
+        );
+    }
+    
+    /**
+     * Extraire un titre depuis le contenu si pas de heading
+     */
+    extractTitleFromContent(content) {
+        // Prendre les 5 premiers mots comme titre
+        const words = content.split(' ').slice(0, 5).join(' ');
+        return words.length > 50 ? words.substring(0, 50) + '...' : words;
     }
 
     /**
