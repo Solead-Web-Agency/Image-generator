@@ -20,6 +20,7 @@ class ImageGeneratorApp {
         this.scannedStyleUrl = null;
         this.customStyleData = null;
         this.selectedSections = new Set(); // Track selected sections for page scanner
+        this.useServerKeys = false; // Sera mis à true si les clés sont configurées côté serveur
 
         this.initializeElements();
         this.attachEventListeners();
@@ -571,7 +572,7 @@ class ImageGeneratorApp {
     }
 
     async handleGenerateImage() {
-        if (!this.apiKey) {
+        if (!this.apiKey && !this.useServerKeys) {
             this.showMessage('Veuillez configurer votre clé API OpenAI', 'error');
             return;
         }
@@ -1005,7 +1006,7 @@ class ImageGeneratorApp {
     }
 
     async handleAnalyzeSelectedSections() {
-        if (!this.apiKey) {
+        if (!this.apiKey && !this.useServerKeys) {
             this.showMessage('Veuillez configurer votre clé API OpenAI', 'error');
             return;
         }
@@ -1150,7 +1151,7 @@ class ImageGeneratorApp {
             return;
         }
 
-        if (!this.apiKey) {
+        if (!this.apiKey && !this.useServerKeys) {
             this.showMessage('Veuillez configurer votre clé API OpenAI', 'error');
             return;
         }
@@ -1209,14 +1210,15 @@ class ImageGeneratorApp {
     }
 
     async generateImage(prompt) {
-        if (!this.apiKey) {
+        // Si les clés ne sont ni locales ni serveur, erreur
+        if (!this.apiKey && !this.useServerKeys) {
             throw new Error('Clé API OpenAI manquante. Configurez-la dans config.js ou dans les paramètres.');
         }
 
         const model = this.modelSelect.value;
         const size = this.sizeSelect.value;
 
-        console.log('🎨 Génération image avec:', { model, size, promptLength: prompt.length, apiKeyLength: this.apiKey.length });
+        console.log('🎨 Génération image avec:', { model, size, promptLength: prompt.length, useServerKeys: this.useServerKeys });
 
         // Vérifier la compatibilité taille/modèle
         if (model === 'dall-e-2' && (size === '1792x1024' || size === '1024x1792')) {
@@ -1234,7 +1236,6 @@ class ImageGeneratorApp {
         const requestBody = {
             model: model,
             prompt: finalPrompt,
-            n: 1,
             size: size
         };
 
@@ -1247,11 +1248,11 @@ class ImageGeneratorApp {
         console.log('📦 Request body:', requestBody);
 
         try {
-            const response = await fetch('https://api.openai.com/v1/images/generations', {
+            // Utiliser notre API backend au lieu d'appeler directement OpenAI
+            const response = await fetch('/api/generate-image', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.apiKey}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(requestBody)
             });
@@ -1941,7 +1942,7 @@ class ImageGeneratorApp {
             return;
         }
 
-        if (!this.apiKey) {
+        if (!this.apiKey && !this.useServerKeys) {
             this.showMessage('Clé API OpenAI requise', 'error');
             return;
         }
@@ -1996,7 +1997,7 @@ class ImageGeneratorApp {
     }
 
     async handleGenerateCSVImages() {
-        if (!this.apiKey) {
+        if (!this.apiKey && !this.useServerKeys) {
             this.showMessage('Clé API OpenAI requise', 'error');
             return;
         }
