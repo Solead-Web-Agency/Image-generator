@@ -762,6 +762,13 @@ class ImageGeneratorApp {
                     <input type="checkbox" class="section-checkbox" data-index="${index}">
                     <h4 class="section-card-title">${section.title}</h4>
                 </div>
+                ${section.imageUrls && section.imageUrls.length > 0 ? `
+                    <div class="section-card-thumbnail">
+                        <img src="${section.imageUrls[0]}" alt="Aperçu" loading="lazy" 
+                             onerror="this.parentElement.innerHTML='<div class=\\'thumbnail-error\\'>❌ Aperçu indisponible</div>'" />
+                        ${section.imageUrls.length > 1 ? `<span class="thumbnail-badge">+${section.imageUrls.length - 1}</span>` : ''}
+                    </div>
+                ` : ''}
                 <div class="section-card-badges">
                     <span class="section-badge ${section.hasImage ? 'has-image' : 'no-image'}">
                         ${section.hasImage ? '✅ A déjà une image' : '🖼️ Sans image'}
@@ -774,8 +781,8 @@ class ImageGeneratorApp {
                     <span>${section.content.length} caractères</span>
                 </div>
                 <div class="section-card-actions">
-                    <button class="btn-preview-action" data-index="${index}" title="Voir le contenu complet">
-                        📄 Contenu
+                    <button class="btn-preview-action" data-index="${index}" title="Voir le contenu complet et les images">
+                        ${section.imageUrls && section.imageUrls.length > 0 ? '👁️ Aperçu complet' : '📄 Contenu'}
                     </button>
                 </div>
             `;
@@ -866,16 +873,32 @@ class ImageGeneratorApp {
                             ${section.classes ? `<span class="meta-badge">Classes: ${section.classes}</span>` : ''}
                         </div>
                         
+                        ${section.imageUrls && section.imageUrls.length > 0 ? `
+                            <div class="section-images-preview">
+                                <h4 style="margin-bottom: 1rem; color: var(--primary-blue);">
+                                    📸 Aperçu visuel (${section.imageUrls.length} image${section.imageUrls.length > 1 ? 's' : ''}) :
+                                </h4>
+                                <div class="preview-images-grid">
+                                    ${section.imageUrls.map(url => `
+                                        <div class="preview-image-wrapper">
+                                            <img src="${url}" alt="Image de la section" loading="lazy" 
+                                                 onerror="this.parentElement.innerHTML='<div class=\\'image-error\\'>❌ Image non chargée</div>'" />
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
                         <div class="section-full-content">
-                            <h4 style="margin-bottom: 1rem; color: var(--primary-blue);">Contenu complet :</h4>
+                            <h4 style="margin-bottom: 1rem; color: var(--primary-blue);">📄 Contenu complet :</h4>
                             <div style="background: var(--light-bg); padding: 1.5rem; border-radius: 8px; line-height: 1.8; color: var(--text-dark);">
                                 ${section.content}
                             </div>
                         </div>
                         
-                        ${section.imageCount > 0 ? `
-                            <div style="margin-top: 1.5rem; padding: 1rem; background: #DCFCE7; border-radius: 8px; border: 1px solid #BBF7D0;">
-                                <strong style="color: #15803D;">📸 ${section.imageCount} image${section.imageCount > 1 ? 's' : ''} déjà présente${section.imageCount > 1 ? 's' : ''} dans cette section</strong>
+                        ${section.imageCount > 0 && (!section.imageUrls || section.imageUrls.length === 0) ? `
+                            <div style="margin-top: 1.5rem; padding: 1rem; background: #FEF3C7; border-radius: 8px; border: 1px solid #FDE68A;">
+                                <strong style="color: #A16207;">⚠️ ${section.imageCount} image${section.imageCount > 1 ? 's' : ''} détectée${section.imageCount > 1 ? 's' : ''} mais URL(s) non disponible${section.imageCount > 1 ? 's' : ''}</strong>
                             </div>
                         ` : ''}
                     </div>

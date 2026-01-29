@@ -64,6 +64,12 @@ class PageScanner {
                 .join(' ')
                 .substring(0, 500); // Limiter à 500 caractères
             
+            // Extraire les URLs des images
+            const imageUrls = Array.from(images)
+                .map(img => img.src || img.dataset.src || img.getAttribute('data-lazy-src'))
+                .filter(url => url && url.startsWith('http'))
+                .slice(0, 5); // Max 5 images par section
+            
             if (textContent) {
                 sections.push({
                     index: index,
@@ -71,6 +77,7 @@ class PageScanner {
                     content: textContent,
                     hasImage: images.length > 0,
                     imageCount: images.length,
+                    imageUrls: imageUrls,
                     element: element.tagName,
                     classes: element.className
                 });
