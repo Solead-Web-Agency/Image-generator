@@ -135,6 +135,7 @@ class PageScanner {
             let excludedByFilter = 0;
             let tooShort = 0;
             let alreadyProcessed = 0;
+            let exampleLogged = false;
             
             allDivs.forEach(div => {
                 if (processedElements.has(div)) {
@@ -148,6 +149,16 @@ class PageScanner {
                 }
                 
                 const extracted = this.extractSectionData(div);
+                
+                // Log un exemple de div rejeté pour debug
+                if (!exampleLogged && (!extracted || extracted.content.length < 50)) {
+                    console.log(`   🔍 EXEMPLE de div rejeté:`);
+                    console.log(`      - Contenu extrait: "${extracted ? extracted.content : 'null'}" (${extracted ? extracted.content.length : 0} chars)`);
+                    console.log(`      - Tag: ${div.tagName}, Classes: "${div.className}"`);
+                    console.log(`      - Texte brut (100 premiers chars): "${div.textContent.substring(0, 100)}"`);
+                    exampleLogged = true;
+                }
+                
                 if (!extracted || extracted.content.length < 50) {
                     tooShort++;
                     return;
@@ -193,12 +204,15 @@ class PageScanner {
         // Extraire le texte (paragraphes OU texte direct si pas de paragraphes)
         let textContent = '';
         if (paragraphs.length > 0) {
+            // Ne pas filtrer les paragraphes courts ! Les garder tous.
             textContent = Array.from(paragraphs)
                 .map(p => p.textContent.trim())
-                .filter(text => text.length > 20)
+                .filter(text => text.length > 0) // Juste enlever les vides
                 .join(' ');
-        } else {
-            // Fallback: prendre tout le texte de l'élément
+        }
+        
+        // Si pas de paragraphes OU paragraphes vides, prendre tout le texte
+        if (!textContent || textContent.length === 0) {
             textContent = element.textContent.trim();
         }
         
