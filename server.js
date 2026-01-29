@@ -13,6 +13,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.static('public'));
 
 // Routes API
+app.get('/api/check-config', require('./api/check-config'));
 app.post('/api/generate-image', require('./api/generate-image'));
 app.post('/api/save-image', require('./api/save-image'));
 app.post('/api/analyze-page', require('./api/analyze-page'));

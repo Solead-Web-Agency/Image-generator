@@ -24,6 +24,7 @@ class ImageGeneratorApp {
         this.initializeElements();
         this.attachEventListeners();
         this.loadSavedApiKey();
+        this.checkServerConfig(); // Vérifier si les clés sont configurées côté serveur
         this.waitForDataLoad();
     }
 
@@ -281,6 +282,46 @@ class ImageGeneratorApp {
     loadSavedApiKey() {
         if (this.apiKey && this.apiKeyInput) {
             this.apiKeyInput.value = this.apiKey;
+        }
+    }
+
+    async checkServerConfig() {
+        try {
+            const response = await fetch('/api/check-config');
+            const data = await response.json();
+            
+            if (data.success && data.configured.openai) {
+                // Les clés sont configurées côté serveur
+                console.log('✅ Clés API configurées sur le serveur');
+                
+                // Cacher le champ de saisie et afficher un message
+                const apiKeyGroup = this.apiKeyInput?.parentElement;
+                if (apiKeyGroup) {
+                    apiKeyGroup.style.display = 'none';
+                    
+                    // Ajouter un badge "Configuré sur le serveur"
+                    const badge = document.createElement('div');
+                    badge.className = 'server-config-badge';
+                    badge.innerHTML = '✅ Clés API configurées sur le serveur';
+                    badge.style.cssText = `
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        padding: 12px 20px;
+                        border-radius: 8px;
+                        text-align: center;
+                        font-weight: 500;
+                        margin-bottom: 20px;
+                        box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+                    `;
+                    apiKeyGroup.parentElement.insertBefore(badge, apiKeyGroup);
+                }
+                
+                // Forcer l'utilisation des clés serveur (pas besoin de clé locale)
+                this.useServerKeys = true;
+            }
+        } catch (error) {
+            console.log('ℹ️ Impossible de vérifier la config serveur, mode local:', error.message);
+            // En cas d'erreur (ex: local sans serveur), on continue normalement
         }
     }
 
