@@ -139,8 +139,8 @@ class PageScanner {
      * Extraire les données d'une section/élément
      */
     extractSectionData(element) {
-        // Skip si l'élément est vide ou caché
-        if (!element || element.offsetParent === null) {
+        // Skip si l'élément est vide
+        if (!element) {
             return null;
         }
         
