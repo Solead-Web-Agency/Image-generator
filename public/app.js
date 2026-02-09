@@ -428,6 +428,9 @@ class ImageGeneratorApp {
         
         this.showMessage(`Style ${style} sélectionné ✅`, 'success');
         
+        // Afficher l'étape 3 avec animation
+        this.showStepWithAnimation(3);
+        
         // Compléter l'étape 2 et passer à l'étape 3
         console.log('🔄 Calling accordionManager.completeStep(2)...');
         if (typeof accordionManager !== 'undefined') {
@@ -727,8 +730,8 @@ class ImageGeneratorApp {
     // ==================== FONCTIONS MODE SCAN ====================
 
     handleModeChange(selectedBtn) {
-        // Afficher l'étape 3 avec animation maintenant qu'un mode est sélectionné
-        this.showStepWithAnimation(3);
+        // Afficher l'étape 2 avec animation maintenant qu'un mode est sélectionné
+        this.showStepWithAnimation(2);
         
         // Mettre à jour les boutons
         this.modeButtons.forEach(btn => btn.classList.remove('active'));
