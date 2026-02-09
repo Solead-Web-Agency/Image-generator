@@ -147,7 +147,9 @@ Réponds UNIQUEMENT avec ce JSON valide (sans markdown, sans backticks):
         return res.status(200).json({
             success: true,
             url: url,
-            style: analysis
+            style: analysis,
+            allColors: Array.from(styleInfo.colors), // Toutes les couleurs détectées
+            allFonts: Array.from(styleInfo.fonts) // Toutes les polices détectées
         });
 
     } catch (error) {
@@ -216,8 +218,8 @@ function extractStyleFromHTML(html) {
     }
 
     return { 
-        colors: Array.from(colors).slice(0, 15), 
-        fonts: Array.from(fonts).slice(0, 8),
+        colors: Array.from(colors), // Toutes les couleurs sans limite
+        fonts: Array.from(fonts).slice(0, 10),
         cssSnippet 
     };
 }

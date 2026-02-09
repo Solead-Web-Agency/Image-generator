@@ -21,6 +21,11 @@ class ImageGeneratorApp {
         this.customStyleData = null;
         this.selectedSections = new Set(); // Track selected sections for page scanner
         this.useServerKeys = false; // Sera mis à true si les clés sont configurées côté serveur
+        
+        // Pour le sélecteur de couleurs du scanner de style
+        this.allScannedColors = [];
+        this.allScannedFonts = [];
+        this.selectedColors = [];
 
         this.initializeElements();
         this.attachEventListeners();
@@ -1567,9 +1572,12 @@ class ImageGeneratorApp {
             // Store the scanned style data
             this.scannedStyleData = data.style;
             this.scannedStyleUrl = url;
+            this.allScannedColors = data.allColors || [];
+            this.allScannedFonts = data.allFonts || [];
+            this.selectedColors = []; // Couleurs sélectionnées par l'utilisateur
             
             // Display results
-            this.displayScanResults(url, data.style);
+            this.displayScanResults(url, data.style, data.allColors, data.allFonts);
             
             this.showMessage('✅ Site analysé avec succès !', 'success');
             
@@ -1580,7 +1588,7 @@ class ImageGeneratorApp {
         }
     }
     
-    displayScanResults(url, style) {
+    displayScanResults(url, style, allColors, allFonts) {
         const resultDiv = document.getElementById('websiteStyleResult');
         const urlDisplay = resultDiv.querySelector('.scanned-url');
         const colorsDiv = document.getElementById('scannedColors');
@@ -1592,17 +1600,49 @@ class ImageGeneratorApp {
         // URL
         urlDisplay.textContent = url;
         
-        // Colors
+        // Colors - Sélecteur interactif
         colorsDiv.innerHTML = '';
-        const colors = style.colorPalette || style.allColors || [];
+        const colors = allColors && allColors.length > 0 ? allColors : (style.colorPalette || []);
+        
         if (colors.length > 0) {
-            colors.forEach(color => {
-                const swatch = document.createElement('div');
-                swatch.className = 'color-swatch';
-                swatch.style.backgroundColor = color;
-                swatch.setAttribute('data-color', color);
-                swatch.title = color;
-                colorsDiv.appendChild(swatch);
+            // Header avec stats et actions
+            const header = document.createElement('div');
+            header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;';
+            header.innerHTML = `
+                <div style="color: var(--text-gray); font-size: 0.9rem;">
+                    ${colors.length} couleur${colors.length > 1 ? 's' : ''} détectée${colors.length > 1 ? 's' : ''} • 
+                    <span id="selectedColorsCount">0</span> sélectionnée${this.selectedColors.length > 1 ? 's' : ''}
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-secondary btn-small" onclick="app.selectAllColors()">Tout sélectionner</button>
+                    <button class="btn-secondary btn-small" onclick="app.deselectAllColors()">Tout désélectionner</button>
+                </div>
+            `;
+            colorsDiv.appendChild(header);
+            
+            // Grille de couleurs avec checkboxes
+            const grid = document.createElement('div');
+            grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.75rem;';
+            
+            colors.forEach((color, index) => {
+                const colorCard = document.createElement('div');
+                colorCard.className = 'color-selector-card';
+                colorCard.setAttribute('data-color', color);
+                colorCard.innerHTML = `
+                    <input type="checkbox" class="color-checkbox" id="color-${index}" data-color="${color}" />
+                    <label for="color-${index}" class="color-swatch-selectable" style="background-color: ${color};" title="${color}">
+                        <span class="color-check">✓</span>
+                    </label>
+                    <span class="color-label">${color}</span>
+                `;
+                grid.appendChild(colorCard);
+            });
+            
+            colorsDiv.appendChild(grid);
+            
+            // Ajouter event listeners pour les checkboxes
+            document.querySelectorAll('.color-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => this.handleColorSelection(e));
             });
         } else {
             colorsDiv.innerHTML = '<p style="color: var(--text-gray);">Aucune couleur détectée</p>';
@@ -1634,10 +1674,63 @@ class ImageGeneratorApp {
         confirmBtn.onclick = () => this.confirmScannedStyle();
     }
     
+    handleColorSelection(event) {
+        const color = event.target.dataset.color;
+        const isChecked = event.target.checked;
+        
+        if (isChecked) {
+            if (!this.selectedColors.includes(color)) {
+                this.selectedColors.push(color);
+            }
+        } else {
+            this.selectedColors = this.selectedColors.filter(c => c !== color);
+        }
+        
+        // Mettre à jour le compteur
+        const countSpan = document.getElementById('selectedColorsCount');
+        if (countSpan) {
+            countSpan.textContent = this.selectedColors.length;
+        }
+        
+        console.log('✅ Couleurs sélectionnées:', this.selectedColors);
+    }
+    
+    selectAllColors() {
+        document.querySelectorAll('.color-checkbox').forEach(checkbox => {
+            checkbox.checked = true;
+            const color = checkbox.dataset.color;
+            if (!this.selectedColors.includes(color)) {
+                this.selectedColors.push(color);
+            }
+        });
+        
+        const countSpan = document.getElementById('selectedColorsCount');
+        if (countSpan) {
+            countSpan.textContent = this.selectedColors.length;
+        }
+    }
+    
+    deselectAllColors() {
+        document.querySelectorAll('.color-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        this.selectedColors = [];
+        
+        const countSpan = document.getElementById('selectedColorsCount');
+        if (countSpan) {
+            countSpan.textContent = 0;
+        }
+    }
+    
     confirmScannedStyle() {
         if (!this.scannedStyleData) {
             this.showMessage('Aucun style scanné disponible', 'error');
             return;
+        }
+        
+        // Utiliser les couleurs sélectionnées si disponibles
+        if (this.selectedColors.length > 0) {
+            this.scannedStyleData.colorPalette = this.selectedColors;
         }
         
         // Mark style as selected
@@ -2165,5 +2258,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const app = checkAuth();
     if (app) {
         console.log('✅ Image Generator App initialized');
+        window.app = app; // Rendre l'app accessible globalement pour les onclick
     }
 });
