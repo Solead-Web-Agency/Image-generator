@@ -701,6 +701,11 @@ class ImageGeneratorApp {
     // ==================== FONCTIONS MODE SCAN ====================
 
     handleModeChange(selectedBtn) {
+        // Afficher l'étape 3 maintenant qu'un mode est sélectionné
+        if (this.globalSteps.step3) {
+            this.globalSteps.step3.style.display = 'block';
+        }
+        
         // Mettre à jour les boutons
         this.modeButtons.forEach(btn => btn.classList.remove('active'));
         selectedBtn.classList.add('active');
