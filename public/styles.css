@@ -1177,6 +1177,24 @@ textarea {
     position: relative;
 }
 
+/* Animation d'apparition progressive des étapes */
+.accordion-step.step-appear {
+    animation: slideInFromTop 0.5s ease-out;
+}
+
+@keyframes slideInFromTop {
+    0% {
+        opacity: 0;
+        transform: translateY(-30px);
+        max-height: 0;
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+        max-height: 1000px;
+    }
+}
+
 .accordion-step:not(:last-child)::after {
     content: '↓';
     position: absolute;

@@ -377,6 +377,26 @@ class ImageGeneratorApp {
         }
     }
 
+    /**
+     * Affiche une étape avec animation progressive
+     */
+    showStepWithAnimation(stepNumber) {
+        const step = this.globalSteps[`step${stepNumber}`];
+        if (!step) return;
+        
+        // Si déjà visible, ne rien faire
+        if (step.style.display !== 'none') return;
+        
+        // Afficher avec animation
+        step.style.display = 'block';
+        step.classList.add('step-appear');
+        
+        // Retirer la classe d'animation après l'animation (pour réutilisation future)
+        setTimeout(() => {
+            step.classList.remove('step-appear');
+        }, 500);
+    }
+
     handleStyleSelection(selectedCard) {
         console.log('🎨 handleStyleSelection called - this.dataLoaded =', this.dataLoaded);
         if (!this.dataLoaded) {
@@ -493,6 +513,9 @@ class ImageGeneratorApp {
     displayPrompt(prompt) {
         this.generatedPromptDiv.textContent = prompt;
         this.promptSection.style.display = 'block';
+        
+        // Afficher l'étape 4 avec animation
+        this.showStepWithAnimation(4);
         
         // Scroll vers la section
         this.promptSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -628,6 +651,9 @@ class ImageGeneratorApp {
         this.generatedImage.src = imageUrl;
         this.resultSection.style.display = 'block';
         
+        // Afficher l'étape 5 avec animation
+        this.showStepWithAnimation(5);
+        
         // Scroll vers la section
         this.resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         
@@ -701,10 +727,8 @@ class ImageGeneratorApp {
     // ==================== FONCTIONS MODE SCAN ====================
 
     handleModeChange(selectedBtn) {
-        // Afficher l'étape 3 maintenant qu'un mode est sélectionné
-        if (this.globalSteps.step3) {
-            this.globalSteps.step3.style.display = 'block';
-        }
+        // Afficher l'étape 3 avec animation maintenant qu'un mode est sélectionné
+        this.showStepWithAnimation(3);
         
         // Mettre à jour les boutons
         this.modeButtons.forEach(btn => btn.classList.remove('active'));
