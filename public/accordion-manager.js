@@ -10,6 +10,9 @@ class AccordionManager {
     }
 
     init() {
+        // Réinitialisation complète au chargement
+        this.resetAllSteps();
+        
         // Attacher les event listeners aux headers
         document.querySelectorAll('.step-header').forEach(header => {
             header.addEventListener('click', () => {
@@ -20,6 +23,30 @@ class AccordionManager {
 
         // Ouvrir la première étape par défaut
         this.openStep(1);
+    }
+    
+    resetAllSteps() {
+        console.log('🔄 [ACCORDION] Réinitialisation complète au chargement');
+        
+        // Nettoyer toutes les étapes
+        for (let i = 1; i <= this.totalSteps; i++) {
+            const step = document.getElementById(`globalStep${i}`);
+            if (!step) continue;
+            
+            // Retirer toutes les classes
+            step.classList.remove('active', 'completed');
+            
+            // Forcer display: none pour toutes les étapes sauf la 1
+            if (i > 1) {
+                step.style.display = 'none';
+            } else {
+                step.style.display = 'block';
+            }
+        }
+        
+        // Réinitialiser l'état
+        this.completedSteps = [];
+        this.currentStep = 1;
     }
 
     toggleStep(stepNumber) {

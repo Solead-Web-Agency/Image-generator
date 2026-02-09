@@ -1179,19 +1179,17 @@ textarea {
 
 /* Animation d'apparition progressive des étapes */
 .accordion-step.step-appear {
-    animation: slideInFromTop 0.5s ease-out;
+    animation: slideInFromTop 0.5s ease-out forwards;
 }
 
 @keyframes slideInFromTop {
     0% {
         opacity: 0;
-        transform: translateY(-30px);
-        max-height: 0;
+        transform: translateY(-20px) scale(0.95);
     }
     100% {
         opacity: 1;
-        transform: translateY(0);
-        max-height: 1000px;
+        transform: translateY(0) scale(1);
     }
 }
 
