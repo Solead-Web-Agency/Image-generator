@@ -1261,13 +1261,14 @@ class ImageGeneratorApp {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('❌ Erreur API OpenAI (texte brut):', errorText);
+                console.error('❌ Erreur API (texte brut):', errorText);
                 
                 let errorMessage = 'Erreur lors de la génération de l\'image';
                 try {
                     const error = JSON.parse(errorText);
-                    console.error('❌ Erreur API OpenAI (JSON):', error);
-                    errorMessage = error.error?.message || errorMessage;
+                    console.error('❌ Erreur API (JSON):', error);
+                    // Support multiple error formats
+                    errorMessage = error.error?.message || error.error || error.message || errorMessage;
                 } catch (e) {
                     errorMessage = `Erreur ${response.status}: ${errorText}`;
                 }
@@ -1277,7 +1278,17 @@ class ImageGeneratorApp {
 
             const data = await response.json();
             console.log('✅ Image générée avec succès!');
-            return data.data[0].url;
+            console.log('📸 Réponse API:', data);
+            
+            // Le format de réponse de notre API backend est différent
+            if (data.imageUrl) {
+                return data.imageUrl;
+            } else if (data.data && data.data[0] && data.data[0].url) {
+                // Fallback pour compatibilité avec ancien format
+                return data.data[0].url;
+            } else {
+                throw new Error('Format de réponse invalide: pas d\'URL d\'image');
+            }
         } catch (error) {
             console.error('💥 Erreur complète:', error);
             console.error('💥 Erreur name:', error.name);
@@ -1285,7 +1296,7 @@ class ImageGeneratorApp {
             console.error('💥 Erreur stack:', error.stack);
             
             if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-                throw new Error('Impossible de contacter l\'API OpenAI. Causes possibles:\n- Pas de connexion internet\n- Firewall/Antivirus bloque la requête\n- Problème de CORS (utilisez http://localhost:8000)\n\nOuvrez la console (F12) pour plus de détails.');
+                throw new Error('Impossible de contacter le serveur. Causes possibles:\n- Le serveur n\'est pas démarré\n- Pas de connexion internet\n- Firewall/Antivirus bloque la requête\n\nOuvrez la console (F12) pour plus de détails.');
             }
             throw error;
         }
