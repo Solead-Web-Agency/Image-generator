@@ -2424,12 +2424,194 @@ class ImageGeneratorApp {
             return;
         }
         
-        this.showMessage('🎨 Modification des images en cours... (à implémenter avec DALL-E)', 'success');
+        try {
+            const totalImages = this.selectedImages.length;
+            this.showLoading(`Modification de ${totalImages} image(s) en cours...`);
+            
+            const results = [];
+            let successCount = 0;
+            let failedCount = 0;
+            
+            // Obtenir les données de style
+            const styleData = this.customStyleData || getStyleData(this.selectedStyle);
+            
+            // Traiter chaque image sélectionnée
+            for (let i = 0; i < this.selectedImages.length; i++) {
+                const imageIndex = this.selectedImages[i];
+                const imageData = this.scannedImages[imageIndex];
+                
+                this.loadingMessage.textContent = `Modification de l'image ${i + 1}/${totalImages}...`;
+                
+                try {
+                    console.log(`🎨 [${i + 1}/${totalImages}] Analyzing and modifying:`, imageData.url);
+                    
+                    // Appel API pour analyser et modifier l'image
+                    const response = await fetch('/api/analyze-and-modify-image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            imageUrl: imageData.url,
+                            modificationPrompt: modificationPrompt,
+                            style: styleData
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Erreur API: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data.success) {
+                        throw new Error(data.error || 'Échec de la modification');
+                    }
+                    
+                    console.log(`✅ [${i + 1}/${totalImages}] Success:`, data.newImageUrl);
+                    
+                    // Sauvegarder l'image générée
+                    this.loadingMessage.textContent = `Sauvegarde de l'image ${i + 1}/${totalImages}...`;
+                    
+                    const saveResult = await APIClient.saveImage(data.newImageUrl, {
+                        style: this.selectedStyle,
+                        subject: `Modified: ${imageData.alt || 'image'}`,
+                        prompt: data.dallePrompt,
+                        originalImageUrl: imageData.url,
+                        modificationPrompt: modificationPrompt,
+                        model: 'dall-e-3',
+                        size: '1024x1024',
+                        quality: 'standard',
+                        mode: 'from-images'
+                    });
+                    
+                    // Ajouter à l'historique
+                    imageStorage.addToHistory({
+                        imageUrl: saveResult.path,
+                        originalUrl: data.newImageUrl,
+                        filename: saveResult.filename,
+                        style: this.selectedStyle,
+                        subject: `Modified: ${imageData.alt || 'image'}`,
+                        prompt: data.dallePrompt
+                    });
+                    
+                    results.push({
+                        success: true,
+                        original: imageData,
+                        modified: data
+                    });
+                    
+                    successCount++;
+                    
+                } catch (error) {
+                    console.error(`❌ [${i + 1}/${totalImages}] Failed:`, error);
+                    results.push({
+                        success: false,
+                        original: imageData,
+                        error: error.message
+                    });
+                    failedCount++;
+                }
+            }
+            
+            this.hideLoading();
+            
+            // Afficher les résultats
+            this.displayModificationResults(results);
+            
+            // Message de succès
+            if (failedCount === 0) {
+                this.showMessage(`✅ ${successCount} image(s) modifiée(s) avec succès !`, 'success');
+            } else {
+                this.showMessage(`⚠️ ${successCount} succès, ${failedCount} échec(s)`, 'error');
+            }
+            
+            // Rafraîchir l'historique
+            this.refreshHistory();
+            
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error modifying images:', error);
+            this.showMessage('❌ Erreur lors de la modification: ' + error.message, 'error');
+        }
+    }
+    
+    displayModificationResults(results) {
+        // Afficher l'étape 4 avec les résultats
+        this.showStepWithAnimation(4);
         
-        // TODO: Implémenter la modification d'images avec DALL-E
-        console.log('Images à modifier:', this.selectedImages);
-        console.log('Instructions:', modificationPrompt);
-        console.log('Style:', this.selectedStyle);
+        const promptSection = document.getElementById('promptSection');
+        if (promptSection) {
+            promptSection.style.display = 'none';
+        }
+        
+        // Créer une section de résultats
+        const generatedPromptDiv = document.getElementById('generatedPrompt');
+        if (!generatedPromptDiv) return;
+        
+        generatedPromptDiv.innerHTML = `
+            <div style="background: var(--light-bg); padding: 1.5rem; border-radius: 12px;">
+                <h3 style="margin: 0 0 1rem 0; color: var(--text-dark);">
+                    🎨 Résultats de la modification
+                </h3>
+                <div class="modification-results-grid">
+                    ${results.map((result, index) => {
+                        if (result.success) {
+                            return `
+                                <div class="modification-result-card success">
+                                    <div class="result-images">
+                                        <div class="result-image-wrapper">
+                                            <img src="${result.original.url}" alt="Original" />
+                                            <span class="result-label">Original</span>
+                                        </div>
+                                        <div class="result-arrow">→</div>
+                                        <div class="result-image-wrapper">
+                                            <img src="${result.modified.newImageUrl}" alt="Modifiée" />
+                                            <span class="result-label">Modifiée</span>
+                                        </div>
+                                    </div>
+                                    <div class="result-info">
+                                        <p class="result-alt">${result.original.alt || 'Sans description'}</p>
+                                        <span class="result-status success">✓ Succès</span>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            return `
+                                <div class="modification-result-card failed">
+                                    <div class="result-images">
+                                        <div class="result-image-wrapper">
+                                            <img src="${result.original.url}" alt="Original" />
+                                            <span class="result-label">Original</span>
+                                        </div>
+                                    </div>
+                                    <div class="result-info">
+                                        <p class="result-alt">${result.original.alt || 'Sans description'}</p>
+                                        <span class="result-status failed">✗ Échec: ${result.error}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }).join('')}
+                </div>
+            </div>
+        `;
+        
+        // Afficher la section
+        const apiConfigSection = document.querySelector('.api-config');
+        if (apiConfigSection) {
+            apiConfigSection.style.display = 'none';
+        }
+        
+        const generateImageBtn = document.getElementById('generateImageBtn');
+        if (generateImageBtn) {
+            generateImageBtn.style.display = 'none';
+        }
+        
+        // Compléter l'étape 3 et ouvrir l'étape 4
+        if (typeof accordionManager !== 'undefined') {
+            accordionManager.completeStep(3);
+        }
     }
 }
 
