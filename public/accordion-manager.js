@@ -151,6 +151,11 @@ class AccordionManager {
                 step3Desc.textContent = 'Chargez votre fichier CSV';
                 step3Icon.textContent = '📊';
                 break;
+            case 'from-images':
+                step3Title.textContent = 'Images existantes';
+                step3Desc.textContent = 'Récupérez et modifiez des images';
+                step3Icon.textContent = '🖼️';
+                break;
         }
     }
 

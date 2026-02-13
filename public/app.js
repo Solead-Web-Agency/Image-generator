@@ -51,6 +51,19 @@ class ImageGeneratorApp {
         this.manualContent = document.getElementById('manualContent');
         this.scanContent = document.getElementById('scanContent');
         this.csvContent = document.getElementById('csvContent');
+        this.fromImagesContent = document.getElementById('fromImagesContent');
+        
+        // From Images elements
+        this.imagesScanUrl = document.getElementById('imagesScanUrl');
+        this.scanPageImagesBtn = document.getElementById('scanPageImagesBtn');
+        this.scannedImagesResults = document.getElementById('scannedImagesResults');
+        this.imagesGrid = document.getElementById('imagesGrid');
+        this.imagesFoundCount = document.getElementById('imagesFoundCount');
+        this.imagesSelectedCount = document.getElementById('imagesSelectedCount');
+        this.imagesModificationPrompt = document.getElementById('imagesModificationPrompt');
+        this.modifySelectedImagesBtn = document.getElementById('modifySelectedImagesBtn');
+        this.selectedImages = [];
+        this.scannedImages = [];
         
         // Scan elements
         this.urlInput = document.getElementById('urlInput');
@@ -160,6 +173,14 @@ class ImageGeneratorApp {
         this.parseCSVBtn.addEventListener('click', () => this.handleParseCSV());
         this.analyzeCSVBtn.addEventListener('click', () => this.handleAnalyzeCSV());
         this.generateCSVImagesBtn.addEventListener('click', () => this.handleGenerateCSVImages());
+        
+        // From Images buttons
+        if (this.scanPageImagesBtn) {
+            this.scanPageImagesBtn.addEventListener('click', () => this.handleScanPageImages());
+        }
+        if (this.modifySelectedImagesBtn) {
+            this.modifySelectedImagesBtn.addEventListener('click', () => this.handleModifySelectedImages());
+        }
         this.exportCSVBtn.addEventListener('click', () => this.handleExportCSV());
         
         // Style source selector
@@ -749,6 +770,7 @@ class ImageGeneratorApp {
         this.manualContent.style.display = 'none';
         this.scanContent.style.display = 'none';
         this.csvContent.style.display = 'none';
+        this.fromImagesContent.style.display = 'none';
 
         // Afficher le contenu approprié
         if (mode === 'manual') {
@@ -757,6 +779,8 @@ class ImageGeneratorApp {
             this.scanContent.style.display = 'block';
         } else if (mode === 'csv') {
             this.csvContent.style.display = 'block';
+        } else if (mode === 'from-images') {
+            this.fromImagesContent.style.display = 'block';
         }
 
         // Mettre à jour le titre/description de l'étape 3
@@ -2240,6 +2264,169 @@ class ImageGeneratorApp {
             console.error('Error exporting CSV:', error);
             this.showMessage(`Erreur: ${error.message}`, 'error');
         }
+    }
+    
+    // ==================== FONCTIONS MODE FROM-IMAGES ====================
+    
+    async handleScanPageImages() {
+        const url = this.imagesScanUrl.value.trim();
+        
+        if (!url) {
+            this.showMessage('Veuillez entrer une URL', 'error');
+            return;
+        }
+        
+        // Validate URL
+        try {
+            new URL(url);
+        } catch (e) {
+            this.showMessage('URL invalide. Exemple: https://exemple.com', 'error');
+            return;
+        }
+        
+        try {
+            this.showLoading('Scan des images de la page en cours...');
+            
+            const response = await fetch('/api/extract-page-images', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Erreur serveur: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Échec de l\'extraction');
+            }
+            
+            this.hideLoading();
+            
+            // Stocker les images scannées
+            this.scannedImages = data.images;
+            this.selectedImages = [];
+            
+            // Afficher les résultats
+            this.displayScannedImages(data.images);
+            
+            this.showMessage(`✅ ${data.count} image(s) trouvée(s) !`, 'success');
+            
+        } catch (error) {
+            this.hideLoading();
+            console.error('Error scanning page images:', error);
+            this.showMessage('❌ Erreur lors du scan: ' + error.message, 'error');
+        }
+    }
+    
+    displayScannedImages(images) {
+        if (!images || images.length === 0) {
+            this.imagesGrid.innerHTML = '<p style="color: var(--text-gray); text-align: center; padding: 2rem;">Aucune image trouvée sur cette page</p>';
+            this.scannedImagesResults.style.display = 'block';
+            return;
+        }
+        
+        // Mettre à jour les compteurs
+        this.imagesFoundCount.textContent = images.length;
+        this.imagesSelectedCount.textContent = 0;
+        
+        // Créer la grille d'images
+        this.imagesGrid.innerHTML = '';
+        
+        images.forEach((img, index) => {
+            const imageCard = document.createElement('div');
+            imageCard.className = 'image-card';
+            imageCard.innerHTML = `
+                <input type="checkbox" class="image-checkbox" id="img-${index}" data-index="${index}" />
+                <label for="img-${index}" class="image-preview-wrapper">
+                    <img src="${img.url}" alt="${img.alt || 'Image'}" class="image-preview" loading="lazy" />
+                    <div class="image-check-overlay">
+                        <span class="image-check-icon">✓</span>
+                    </div>
+                </label>
+                <div class="image-info">
+                    <div class="image-alt" title="${img.alt || 'Sans description'}">${img.alt || 'Sans description'}</div>
+                    ${img.width && img.height ? `<div class="image-dimensions">${img.width}×${img.height}</div>` : ''}
+                </div>
+            `;
+            
+            this.imagesGrid.appendChild(imageCard);
+        });
+        
+        // Ajouter event listeners pour les checkboxes
+        document.querySelectorAll('.image-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => this.handleImageSelection(e));
+        });
+        
+        // Afficher les résultats
+        this.scannedImagesResults.style.display = 'block';
+    }
+    
+    handleImageSelection(event) {
+        const index = parseInt(event.target.dataset.index);
+        const isChecked = event.target.checked;
+        
+        if (isChecked) {
+            if (!this.selectedImages.includes(index)) {
+                this.selectedImages.push(index);
+            }
+        } else {
+            this.selectedImages = this.selectedImages.filter(i => i !== index);
+        }
+        
+        // Mettre à jour le compteur
+        this.imagesSelectedCount.textContent = this.selectedImages.length;
+        
+        console.log('✅ Images sélectionnées:', this.selectedImages);
+    }
+    
+    selectAllImages() {
+        document.querySelectorAll('.image-checkbox').forEach(checkbox => {
+            checkbox.checked = true;
+            const index = parseInt(checkbox.dataset.index);
+            if (!this.selectedImages.includes(index)) {
+                this.selectedImages.push(index);
+            }
+        });
+        
+        this.imagesSelectedCount.textContent = this.selectedImages.length;
+    }
+    
+    deselectAllImages() {
+        document.querySelectorAll('.image-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        this.selectedImages = [];
+        this.imagesSelectedCount.textContent = 0;
+    }
+    
+    async handleModifySelectedImages() {
+        if (this.selectedImages.length === 0) {
+            this.showMessage('Veuillez sélectionner au moins une image', 'error');
+            return;
+        }
+        
+        const modificationPrompt = this.imagesModificationPrompt.value.trim();
+        if (!modificationPrompt) {
+            this.showMessage('Veuillez décrire comment modifier les images', 'error');
+            return;
+        }
+        
+        if (!this.selectedStyle) {
+            this.showMessage('Veuillez d\'abord sélectionner un style visuel (Étape 2)', 'error');
+            return;
+        }
+        
+        this.showMessage('🎨 Modification des images en cours... (à implémenter avec DALL-E)', 'success');
+        
+        // TODO: Implémenter la modification d'images avec DALL-E
+        console.log('Images à modifier:', this.selectedImages);
+        console.log('Instructions:', modificationPrompt);
+        console.log('Style:', this.selectedStyle);
     }
 }
 

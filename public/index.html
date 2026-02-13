@@ -66,6 +66,11 @@
                             <span class="mode-title">Import CSV</span>
                             <span class="mode-desc">Générez des images depuis un fichier CSV</span>
                         </button>
+                        <button class="mode-btn" data-mode="from-images">
+                            <span class="mode-icon">🖼️</span>
+                            <span class="mode-title">À partir d'images existantes</span>
+                            <span class="mode-desc">Récupérez et modifiez des images d'une page</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -482,6 +487,63 @@ MacBook Pro,Ordinateur portable 16 pouces,[à générer],Tech,2500€</pre>
                                 Générer toutes les images
                             </button>
                         </div>
+                        </section>
+                    </div>
+
+                    <!-- Contenu mode À partir d'images existantes -->
+                    <div id="fromImagesContent" class="mode-content" style="display: none;">
+                        <section class="section">
+                            <div class="section-header" style="margin-bottom: 2rem;">
+                                <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">🖼️ Récupérer et modifier des images</h3>
+                                <p style="margin: 0; color: var(--text-gray);">Scannez une page pour extraire les images et les modifier avec l'IA</p>
+                            </div>
+                            
+                            <!-- Scanner d'images -->
+                            <div class="form-group">
+                                <label for="imagesScanUrl">URL de la page à scanner</label>
+                                <input type="url" id="imagesScanUrl" placeholder="https://exemple.com/page" />
+                                <p class="help-text">💡 L'IA va récupérer toutes les images de la page</p>
+                            </div>
+                            
+                            <button id="scanPageImagesBtn" class="btn-primary btn-large">
+                                <span class="btn-icon">🔍</span>
+                                Scanner les images de la page
+                            </button>
+                            
+                            <!-- Résultats du scan d'images -->
+                            <div id="scannedImagesResults" style="display: none; margin-top: 2rem;">
+                                <div class="section-header" style="margin-bottom: 1.5rem;">
+                                    <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">
+                                        <span id="imagesFoundCount">0</span> image(s) trouvée(s)
+                                    </h3>
+                                    <p style="margin: 0; color: var(--text-gray);">
+                                        <span id="imagesSelectedCount">0</span> sélectionnée(s) • 
+                                        <button class="btn-link" onclick="app.selectAllImages()">Tout sélectionner</button> • 
+                                        <button class="btn-link" onclick="app.deselectAllImages()">Tout désélectionner</button>
+                                    </p>
+                                </div>
+                                
+                                <!-- Grille d'images -->
+                                <div id="imagesGrid" class="images-grid"></div>
+                                
+                                <!-- Instructions de modification -->
+                                <div style="margin-top: 2rem; padding: 1.5rem; background: var(--light-bg); border-radius: 8px;">
+                                    <h4 style="margin: 0 0 1rem 0; color: var(--text-dark);">
+                                        ✨ Comment voulez-vous modifier les images sélectionnées ?
+                                    </h4>
+                                    <div class="form-group">
+                                        <label for="imagesModificationPrompt">Instructions de modification</label>
+                                        <textarea id="imagesModificationPrompt" rows="3" 
+                                            placeholder="Ex: Rendre l'image plus lumineuse et ajouter un filtre vintage..."></textarea>
+                                        <p class="help-text">💡 L'IA va modifier chaque image selon ces instructions tout en gardant le style choisi</p>
+                                    </div>
+                                    
+                                    <button id="modifySelectedImagesBtn" class="btn-primary btn-large">
+                                        <span class="btn-icon">🎨</span>
+                                        Modifier les images sélectionnées
+                                    </button>
+                                </div>
+                            </div>
                         </section>
                     </div>
                 </div>

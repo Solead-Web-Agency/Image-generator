@@ -21,6 +21,7 @@ app.post('/api/analyze-website-style', require('./api/analyze-website-style'));
 app.post('/api/scan-page-content', require('./api/scan-page-content'));
 app.post('/api/search-library-images', require('./api/search-library-images'));
 app.post('/api/analyze-library-style', require('./api/analyze-library-style'));
+app.post('/api/extract-page-images', require('./api/extract-page-images'));
 
 // Route principale
 app.get('/', (req, res) => {
