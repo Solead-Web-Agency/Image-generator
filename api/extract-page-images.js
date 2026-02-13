@@ -69,6 +69,7 @@ module.exports = async (req, res) => {
 function extractImagesFromHTML(html, baseUrl) {
     const images = [];
     const seenUrls = new Set();
+    const seenBaseUrls = new Set(); // Pour détecter les doublons avec params différents
     
     console.log('🔍 Starting image extraction...');
     
@@ -83,9 +84,13 @@ function extractImagesFromHTML(html, baseUrl) {
         // Convertir les URLs relatives en absolues
         imgUrl = resolveUrl(imgUrl, baseUrl);
         
-        // Vérifier validité
-        if (isValidImageUrl(imgUrl) && !seenUrls.has(imgUrl)) {
+        // Nettoyer l'URL pour détecter les doublons
+        const baseImgUrl = getBaseImageUrl(imgUrl);
+        
+        // Vérifier validité et déduplication
+        if (isValidImageUrl(imgUrl) && !seenUrls.has(imgUrl) && !seenBaseUrls.has(baseImgUrl)) {
             seenUrls.add(imgUrl);
+            seenBaseUrls.add(baseImgUrl);
             srcCount++;
             
             // Extraire alt text si disponible
@@ -118,9 +123,11 @@ function extractImagesFromHTML(html, baseUrl) {
         
         urls.forEach(imgUrl => {
             imgUrl = resolveUrl(imgUrl, baseUrl);
+            const baseImgUrl = getBaseImageUrl(imgUrl);
             
-            if (isValidImageUrl(imgUrl) && !seenUrls.has(imgUrl)) {
+            if (isValidImageUrl(imgUrl) && !seenUrls.has(imgUrl) && !seenBaseUrls.has(baseImgUrl)) {
                 seenUrls.add(imgUrl);
+                seenBaseUrls.add(baseImgUrl);
                 srcsetCount++;
                 
                 images.push({
@@ -141,9 +148,11 @@ function extractImagesFromHTML(html, baseUrl) {
     
     while ((match = bgRegex.exec(html)) !== null) {
         let imgUrl = resolveUrl(match[1], baseUrl);
+        const baseImgUrl = getBaseImageUrl(imgUrl);
         
-        if (isValidImageUrl(imgUrl) && !seenUrls.has(imgUrl)) {
+        if (isValidImageUrl(imgUrl) && !seenUrls.has(imgUrl) && !seenBaseUrls.has(baseImgUrl)) {
             seenUrls.add(imgUrl);
+            seenBaseUrls.add(baseImgUrl);
             bgCount++;
             images.push({
                 url: imgUrl,
@@ -229,4 +238,25 @@ function isValidImageUrl(url) {
     );
     
     return !shouldIgnore;
+}
+
+/**
+ * Nettoie une URL pour détecter les doublons
+ * Retire les query params de redimensionnement mais garde l'URL de base
+ */
+function getBaseImageUrl(url) {
+    try {
+        const urlObj = new URL(url);
+        // Retirer les query params courants de redimensionnement
+        const paramsToRemove = ['w', 'h', 'width', 'height', 'size', 'resize', 'fit', 'crop', 'quality', 'q', 'format', 'fm'];
+        
+        paramsToRemove.forEach(param => {
+            urlObj.searchParams.delete(param);
+        });
+        
+        // Retourner URL sans les params de redimensionnement
+        return urlObj.origin + urlObj.pathname + (urlObj.search || '');
+    } catch (e) {
+        return url;
+    }
 }
