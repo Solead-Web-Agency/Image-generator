@@ -70,9 +70,12 @@ function extractImagesFromHTML(html, baseUrl) {
     const images = [];
     const seenUrls = new Set();
     
-    // Regex pour trouver les balises img avec src
+    console.log('🔍 Starting image extraction...');
+    
+    // 1. Regex pour trouver les balises img avec src
     const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
     let match;
+    let srcCount = 0;
     
     while ((match = imgRegex.exec(html)) !== null) {
         let imgUrl = match[1];
@@ -80,9 +83,10 @@ function extractImagesFromHTML(html, baseUrl) {
         // Convertir les URLs relatives en absolues
         imgUrl = resolveUrl(imgUrl, baseUrl);
         
-        // Filtrer les images trop petites ou les icônes
+        // Vérifier validité
         if (isValidImageUrl(imgUrl) && !seenUrls.has(imgUrl)) {
             seenUrls.add(imgUrl);
+            srcCount++;
             
             // Extraire alt text si disponible
             const altMatch = match[0].match(/alt=["']([^"']*)["']/i);
@@ -101,13 +105,46 @@ function extractImagesFromHTML(html, baseUrl) {
         }
     }
     
-    // Aussi chercher dans les background-image CSS
+    console.log(`   Found ${srcCount} images from src attributes`);
+    
+    // 2. Extraire srcset (images responsive)
+    const srcsetRegex = /<img[^>]+srcset=["']([^"']+)["'][^>]*>/gi;
+    let srcsetCount = 0;
+    
+    while ((match = srcsetRegex.exec(html)) !== null) {
+        const srcsetValue = match[1];
+        // srcset format: "url1 1x, url2 2x" ou "url1 400w, url2 800w"
+        const urls = srcsetValue.split(',').map(s => s.trim().split(' ')[0]);
+        
+        urls.forEach(imgUrl => {
+            imgUrl = resolveUrl(imgUrl, baseUrl);
+            
+            if (isValidImageUrl(imgUrl) && !seenUrls.has(imgUrl)) {
+                seenUrls.add(imgUrl);
+                srcsetCount++;
+                
+                images.push({
+                    url: imgUrl,
+                    alt: 'Image from srcset',
+                    width: null,
+                    height: null
+                });
+            }
+        });
+    }
+    
+    console.log(`   Found ${srcsetCount} images from srcset attributes`);
+    
+    // 3. Chercher dans les background-image CSS
     const bgRegex = /background-image:\s*url\(["']?([^"')]+)["']?\)/gi;
+    let bgCount = 0;
+    
     while ((match = bgRegex.exec(html)) !== null) {
         let imgUrl = resolveUrl(match[1], baseUrl);
         
         if (isValidImageUrl(imgUrl) && !seenUrls.has(imgUrl)) {
             seenUrls.add(imgUrl);
+            bgCount++;
             images.push({
                 url: imgUrl,
                 alt: 'Background image',
@@ -117,13 +154,19 @@ function extractImagesFromHTML(html, baseUrl) {
         }
     }
     
-    // Filtrer les images trop petites (probablement des icônes/logos)
-    return images.filter(img => {
+    console.log(`   Found ${bgCount} images from CSS backgrounds`);
+    
+    // 4. Filtrer les images trop petites (seuil réduit à 50x50)
+    const filteredImages = images.filter(img => {
         if (img.width && img.height) {
-            return img.width >= 100 && img.height >= 100;
+            return img.width >= 50 && img.height >= 50;
         }
         return true; // Garder si dimensions inconnues
     });
+    
+    console.log(`   Total: ${images.length} images, after filter: ${filteredImages.length}`);
+    
+    return filteredImages;
 }
 
 /**
@@ -161,23 +204,29 @@ function isValidImageUrl(url) {
     if (!url) return false;
     
     // Extensions d'images courantes
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.avif'];
     const lowerUrl = url.toLowerCase();
     
     // Vérifier l'extension
     const hasImageExtension = imageExtensions.some(ext => lowerUrl.includes(ext));
     
-    // Filtrer les images courantes à ignorer
+    // Si pas d'extension connue, refuser
+    if (!hasImageExtension) return false;
+    
+    // Filtrer UNIQUEMENT les patterns très spécifiques (plus restrictif qu'avant)
     const ignoredPatterns = [
-        'icon', 'favicon', 'logo', 'sprite', 'placeholder',
-        'data:image', // Data URLs (souvent trop petites)
-        '1x1', // Tracking pixels
-        'pixel.gif'
+        'favicon.', // Favicon spécifique
+        '/favicon', // Chemin favicon
+        'data:image', // Data URLs
+        '1x1.', // Tracking pixels
+        'pixel.gif', // Tracking pixels
+        'spacer.gif', // Spacers
+        'blank.gif' // Images vides
     ];
     
     const shouldIgnore = ignoredPatterns.some(pattern => 
         lowerUrl.includes(pattern)
     );
     
-    return hasImageExtension && !shouldIgnore;
+    return !shouldIgnore;
 }

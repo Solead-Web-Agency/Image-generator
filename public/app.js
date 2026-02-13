@@ -2307,6 +2307,9 @@ class ImageGeneratorApp {
             
             this.hideLoading();
             
+            console.log('📸 Images reçues:', data.images);
+            console.log('📊 Nombre total:', data.count);
+            
             // Stocker les images scannées
             this.scannedImages = data.images;
             this.selectedImages = [];
