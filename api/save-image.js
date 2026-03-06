@@ -49,15 +49,23 @@ module.exports = async (req, res) => {
         const filename = `${timestamp}-${cleanStyle}-${cleanSubject}.png`;
         const relativePath = `${dateFolder}/${filename}`;
 
-        // Télécharger l'image depuis OpenAI
+        // Télécharger l'image (HTTP ou data URL base64)
         console.log('📥 Téléchargement de l\'image...');
-        const imageResponse = await fetch(imageUrl);
-        
-        if (!imageResponse.ok) {
-            throw new Error('Impossible de télécharger l\'image depuis OpenAI');
-        }
+        let imageBuffer;
 
-        const imageBuffer = await imageResponse.buffer();
+        if (imageUrl.startsWith('data:')) {
+            // Data URL base64 → buffer directement (GPT-Image-1 retourne du base64)
+            const base64Data = imageUrl.split(',')[1];
+            if (!base64Data) throw new Error('Data URL invalide');
+            imageBuffer = Buffer.from(base64Data, 'base64');
+            console.log('✅ Décodé depuis base64:', imageBuffer.length, 'bytes');
+        } else {
+            const imageResponse = await fetch(imageUrl);
+            if (!imageResponse.ok) {
+                throw new Error(`Impossible de télécharger l\'image: ${imageResponse.status}`);
+            }
+            imageBuffer = await imageResponse.buffer();
+        }
 
         // Créer le dossier si nécessaire
         const publicDir = path.join(process.cwd(), 'public', 'generated-images', dateFolder);
