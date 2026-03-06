@@ -66,8 +66,6 @@ class AccordionManager {
     openStepAndHideNext(stepNumber) {
         console.log(`🔄 Ouverture de l'étape ${stepNumber}, masquage des étapes suivantes`);
 
-        const isFromImages = typeof app !== 'undefined' && app.currentMode === 'from-images';
-
         for (let i = 1; i <= this.totalSteps; i++) {
             const step = document.getElementById(`globalStep${i}`);
             if (!step) continue;
@@ -78,10 +76,9 @@ class AccordionManager {
                 step.style.display = 'block';
             } else if (i < stepNumber) {
                 // Étapes précédentes : restent visibles et complétées
-                // Exception : étape 2 cachée en mode from-images
                 step.classList.remove('active');
                 step.classList.add('completed');
-                step.style.display = (i === 2 && isFromImages) ? 'none' : 'block';
+                step.style.display = 'block';
             } else {
                 // Étapes suivantes : masquées
                 step.classList.remove('active', 'completed');

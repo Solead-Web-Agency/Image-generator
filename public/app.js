@@ -756,6 +756,9 @@ class ImageGeneratorApp {
     // ==================== FONCTIONS MODE SCAN ====================
 
     handleModeChange(selectedBtn) {
+        // Afficher l'étape 2 avec animation maintenant qu'un mode est sélectionné
+        this.showStepWithAnimation(2);
+        
         // Mettre à jour les boutons
         this.modeButtons.forEach(btn => btn.classList.remove('active'));
         selectedBtn.classList.add('active');
@@ -783,28 +786,8 @@ class ImageGeneratorApp {
         // Mettre à jour le titre/description de l'étape 3
         accordionManager.updateStep3Content(mode);
 
-        if (mode === 'from-images') {
-            // Pas de style visuel pour ce mode : masquer l'étape 2 et passer directement à l'étape 3
-            const step2 = document.getElementById('globalStep2');
-            if (step2) {
-                step2.style.display = 'none';
-                step2.classList.remove('active', 'completed');
-            }
-            // Marquer l'étape 1 comme complète et ouvrir l'étape 3 directement
-            accordionManager.completedSteps.add(1);
-            const step1 = document.getElementById('globalStep1');
-            if (step1) { step1.classList.add('completed'); step1.classList.remove('active'); }
-            setTimeout(() => {
-                this.showStepWithAnimation(3);
-                accordionManager.openStep(3);
-            }, 300);
-        } else {
-            // Modes normaux : s'assurer que l'étape 2 est visible et passer à elle
-            const step2 = document.getElementById('globalStep2');
-            if (step2) step2.style.display = 'block';
-            this.showStepWithAnimation(2);
-            accordionManager.completeStep(1);
-        }
+        // Compléter l'étape 1 et passer à l'étape 2
+        accordionManager.completeStep(1);
     }
 
     async handleScanUrl() {
