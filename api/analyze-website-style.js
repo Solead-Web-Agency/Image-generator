@@ -161,65 +161,154 @@ Réponds UNIQUEMENT avec ce JSON valide (sans markdown, sans backticks):
 };
 
 /**
+ * Convertit n'importe quelle couleur CSS en hex 6 digits normalisé
+ */
+function normalizeColor(color) {
+    color = color.trim().toLowerCase();
+
+    // Hex 3 digits → 6 digits
+    const hex3 = color.match(/^#([0-9a-f]{3})$/);
+    if (hex3) {
+        const [, h] = hex3;
+        return `#${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`;
+    }
+
+    // Hex 6 digits
+    if (/^#[0-9a-f]{6}$/.test(color)) return color;
+
+    // rgb(r, g, b)
+    const rgb = color.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (rgb) {
+        const r = parseInt(rgb[1]).toString(16).padStart(2, '0');
+        const g = parseInt(rgb[2]).toString(16).padStart(2, '0');
+        const b = parseInt(rgb[3]).toString(16).padStart(2, '0');
+        return `#${r}${g}${b}`;
+    }
+
+    return null;
+}
+
+/**
+ * Calcule la "distance perceptuelle" entre deux couleurs hex
+ * Permet de filtrer les doublons quasi-identiques
+ */
+function colorDistance(hex1, hex2) {
+    const r1 = parseInt(hex1.slice(1, 3), 16);
+    const g1 = parseInt(hex1.slice(3, 5), 16);
+    const b1 = parseInt(hex1.slice(5, 7), 16);
+    const r2 = parseInt(hex2.slice(1, 3), 16);
+    const g2 = parseInt(hex2.slice(3, 5), 16);
+    const b2 = parseInt(hex2.slice(5, 7), 16);
+    return Math.sqrt((r1-r2)**2 + (g1-g2)**2 + (b1-b2)**2);
+}
+
+/**
+ * Filtre les couleurs trop proches, trop claires ou trop sombres
+ */
+function deduplicateColors(colors, threshold = 25) {
+    // Exclure blanc/noir pur et très proches
+    const filtered = colors.filter(c => {
+        const r = parseInt(c.slice(1, 3), 16);
+        const g = parseInt(c.slice(3, 5), 16);
+        const b = parseInt(c.slice(5, 7), 16);
+        const brightness = (r + g + b) / 3;
+        return brightness > 15 && brightness < 240; // Pas trop sombre ni trop clair
+    });
+
+    const result = [];
+    for (const color of filtered) {
+        const tooClose = result.some(c => colorDistance(c, color) < threshold);
+        if (!tooClose) result.push(color);
+    }
+    return result;
+}
+
+/**
  * Extrait les informations de style basiques depuis le HTML brut
  */
 function extractStyleFromHTML(html) {
-    const colors = new Set();
+    const rawColors = new Map(); // color → poids
     const fonts = new Set();
     let cssSnippet = '';
 
-    // Extraire les couleurs (hex, rgb, rgba, hsl)
-    const hexRegex = /#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/g;
-    const rgbRegex = /rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(?:,\s*[\d.]+\s*)?\)/g;
-    const hslRegex = /hsla?\(\s*\d+\s*,\s*[\d.]+%\s*,\s*[\d.]+%\s*(?:,\s*[\d.]+\s*)?\)/g;
-    
-    [hexRegex, rgbRegex, hslRegex].forEach(regex => {
-        const matches = html.match(regex);
-        if (matches) {
-            matches.forEach(color => colors.add(color));
-        }
-    });
+    // ── 1. Extraire le contenu CSS (style tags + inline styles)
+    const cssBlocks = [];
 
-    // Extraire les fonts (font-family, Google Fonts, CSS imports)
-    // 1. Depuis font-family
+    const styleTags = html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi) || [];
+    styleTags.forEach(b => cssBlocks.push(b));
+
+    const inlineStyles = html.match(/style=["'][^"']{1,500}["']/gi) || [];
+    inlineStyles.forEach(b => cssBlocks.push(b));
+
+    const cssContent = cssBlocks.join('\n');
+
+    // ── 2. Variables CSS (poids fort : ce sont souvent les couleurs de marque)
+    const cssVarRegex = /--[a-zA-Z0-9-]+\s*:\s*(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))/gi;
+    let m;
+    while ((m = cssVarRegex.exec(cssContent)) !== null) {
+        const n = normalizeColor(m[1]);
+        if (n) rawColors.set(n, (rawColors.get(n) || 0) + 5);
+    }
+
+    // ── 3. Propriétés CSS importantes dans les blocs CSS
+    const propRegex = /(?:background(?:-color)?|color|border(?:-color)?|fill|stroke|outline-color|box-shadow)\s*:\s*(#[0-9a-fA-F]{3,8}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+[^)]*\))/gi;
+    while ((m = propRegex.exec(cssContent)) !== null) {
+        const n = normalizeColor(m[1]);
+        if (n) rawColors.set(n, (rawColors.get(n) || 0) + 2);
+    }
+
+    // ── 4. Toutes les couleurs hex dans le CSS (poids faible, pour attraper ce qui reste)
+    const hexAllRegex = /#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/g;
+    while ((m = hexAllRegex.exec(cssContent)) !== null) {
+        const n = normalizeColor(m[0]);
+        if (n) rawColors.set(n, (rawColors.get(n) || 0) + 1);
+    }
+
+    // ── 5. Fallback : couleurs hex dans tout le HTML (poids minimal)
+    if (rawColors.size < 5) {
+        while ((m = hexAllRegex.exec(html)) !== null) {
+            const n = normalizeColor(m[0]);
+            if (n) rawColors.set(n, (rawColors.get(n) || 0) + 0.5);
+        }
+    }
+
+    // ── 6. Trier par poids et dédupliquer
+    const sorted = [...rawColors.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([c]) => c);
+
+    const uniqueColors = deduplicateColors(sorted);
+
+    // ── 7. Fonts
+    // Google Fonts (priorité)
+    const googleFontsRegex = /fonts\.googleapis\.com\/css[^"']*family=([^"'&:)]+)/gi;
+    while ((m = googleFontsRegex.exec(html)) !== null) {
+        m[1].split('|').forEach(font => {
+            const clean = font.replace(/\+/g, ' ').split(':')[0].trim();
+            if (clean) fonts.add(clean);
+        });
+    }
+
+    // font-family dans CSS
     const fontFamilyRegex = /font-family:\s*['"]?([^'";{}]+)['"]?[;{}]/gi;
-    let fontMatch;
-    while ((fontMatch = fontFamilyRegex.exec(html)) !== null) {
-        const fontList = fontMatch[1].split(',');
-        fontList.forEach(font => {
-            const cleanFont = font.trim().replace(/['"]/g, '');
-            if (cleanFont && !cleanFont.includes('sans-serif') && !cleanFont.includes('serif') && !cleanFont.includes('monospace')) {
-                fonts.add(cleanFont);
+    while ((m = fontFamilyRegex.exec(html)) !== null) {
+        m[1].split(',').forEach(font => {
+            const clean = font.trim().replace(/['"]/g, '');
+            if (clean && !['sans-serif','serif','monospace','system-ui','inherit','initial','unset'].includes(clean.toLowerCase())) {
+                fonts.add(clean);
             }
         });
     }
 
-    // 2. Google Fonts dans les links
-    const googleFontsRegex = /fonts\.googleapis\.com\/css[^"]*family=([^"&:]+)/gi;
-    while ((fontMatch = googleFontsRegex.exec(html)) !== null) {
-        const fontNames = fontMatch[1].split('|');
-        fontNames.forEach(font => {
-            const cleanFont = font.replace(/\+/g, ' ').split(':')[0];
-            if (cleanFont) fonts.add(cleanFont);
-        });
-    }
-
-    // 3. @import de fonts
-    const importFontRegex = /@import\s+url\(['"]?[^'"]*family=([^'"&:]+)/gi;
-    while ((fontMatch = importFontRegex.exec(html)) !== null) {
-        const fontName = fontMatch[1].replace(/\+/g, ' ').split(':')[0];
-        if (fontName) fonts.add(fontName);
-    }
-
-    // Extraire un extrait de CSS
+    // Extraire un extrait de CSS pour le debug
     const styleTagMatch = html.match(/<style[^>]*>([\s\S]{0,2000})/i);
-    if (styleTagMatch) {
-        cssSnippet = styleTagMatch[1];
-    }
+    if (styleTagMatch) cssSnippet = styleTagMatch[1];
 
-    return { 
-        colors: Array.from(colors), // Toutes les couleurs sans limite
+    console.log(`🎨 Colors extracted: ${uniqueColors.length} unique colors from ${rawColors.size} raw`);
+
+    return {
+        colors: uniqueColors.slice(0, 40),
         fonts: Array.from(fonts).slice(0, 10),
-        cssSnippet 
+        cssSnippet
     };
 }

@@ -17,15 +17,22 @@ module.exports = async (req, res) => {
 
     // Vérifier quelles clés sont configurées
     const config = {
-        openai: !!process.env.OPENAI_API_KEY,
-        unsplash: !!process.env.UNSPLASH_ACCESS_KEY,
-        pexels: !!process.env.PEXELS_API_KEY
+        openai:    !!process.env.OPENAI_API_KEY,
+        google:    !!process.env.GOOGLE_API_KEY,
+        xai:       !!process.env.XAI_API_KEY,
+        stability: !!process.env.STABILITY_API_KEY,
+        bfl:       !!process.env.BFL_API_KEY,
+        unsplash:  !!process.env.UNSPLASH_ACCESS_KEY,
+        pexels:    !!process.env.PEXELS_API_KEY
     };
+
+    const hasAnyImageProvider = config.openai || config.google || config.xai || config.stability || config.bfl;
 
     return res.status(200).json({
         success: true,
         configured: config,
-        message: config.openai 
+        hasOpenAI: config.openai,
+        message: hasAnyImageProvider
             ? 'Clés API configurées sur le serveur' 
             : 'Configuration requise'
     });

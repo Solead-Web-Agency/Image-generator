@@ -205,28 +205,40 @@ function protectDOMManipulation() {
  * Ajoute un bouton de déconnexion dans le header
  */
 function addLogoutButton() {
-    // Attendre que le DOM soit complètement chargé
     const checkHeader = setInterval(() => {
         const header = document.querySelector('header');
         if (header && isAuthenticated()) {
             clearInterval(checkHeader);
-            
-            // Vérifier si le bouton n'existe pas déjà
             if (document.getElementById('logoutBtn')) return;
-            
+
+            // Wrapper centré pour le titre
+            const titleWrap = document.createElement('div');
+            titleWrap.style.cssText = 'flex:1; text-align:center;';
+            // Déplacer les enfants existants (h1, p) dans le wrapper
+            while (header.firstChild) titleWrap.appendChild(header.firstChild);
+            header.appendChild(titleWrap);
+
+            // Groupe de boutons à droite
+            const btnGroup = document.createElement('div');
+            btnGroup.style.cssText = 'display:flex; gap:0.5rem; align-items:center; flex-shrink:0;';
+
+            const settingsBtn = document.createElement('button');
+            settingsBtn.id = 'settingsBtn';
+            settingsBtn.className = 'btn-secondary';
+            settingsBtn.innerHTML = '⚙️ Config IA';
+            settingsBtn.onclick = () => settingsModal.open();
+
             const logoutBtn = document.createElement('button');
             logoutBtn.id = 'logoutBtn';
             logoutBtn.className = 'btn-secondary';
             logoutBtn.innerHTML = '🔓 Déconnexion';
-            logoutBtn.style.cssText = 'position: absolute; top: 1rem; right: 1rem; padding: 0.5rem 1rem;';
             logoutBtn.onclick = logout;
-            
-            header.style.position = 'relative';
-            header.appendChild(logoutBtn);
+
+            btnGroup.appendChild(settingsBtn);
+            btnGroup.appendChild(logoutBtn);
+            header.appendChild(btnGroup);
         }
     }, 100);
-    
-    // Arrêter après 5 secondes si le header n'est pas trouvé
     setTimeout(() => clearInterval(checkHeader), 5000);
 }
 

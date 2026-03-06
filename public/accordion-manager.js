@@ -56,10 +56,46 @@ class AccordionManager {
         const isActive = step.classList.contains('active');
         
         if (!isActive) {
-            this.openStep(stepNumber);
+            // Clic sur une étape précédente : masquer toutes les étapes après
+            this.openStepAndHideNext(stepNumber);
         } else {
             step.classList.remove('active');
         }
+    }
+
+    openStepAndHideNext(stepNumber) {
+        console.log(`🔄 Ouverture de l'étape ${stepNumber}, masquage des étapes suivantes`);
+
+        for (let i = 1; i <= this.totalSteps; i++) {
+            const step = document.getElementById(`globalStep${i}`);
+            if (!step) continue;
+
+            if (i === stepNumber) {
+                step.classList.add('active');
+                step.classList.remove('completed');
+                step.style.display = 'block';
+            } else if (i < stepNumber) {
+                // Étapes précédentes : restent visibles et complétées
+                step.classList.remove('active');
+                step.classList.add('completed');
+                step.style.display = 'block';
+            } else {
+                // Étapes suivantes : masquées
+                step.classList.remove('active', 'completed');
+                step.style.display = 'none';
+            }
+        }
+
+        // Réinitialiser les completedSteps pour les étapes après stepNumber
+        this.completedSteps = this.completedSteps.filter(s => s < stepNumber);
+        this.currentStep = stepNumber;
+
+        setTimeout(() => {
+            const targetStep = document.getElementById(`globalStep${stepNumber}`);
+            if (targetStep) {
+                targetStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 150);
     }
 
     openStep(stepNumber) {
@@ -120,11 +156,19 @@ class AccordionManager {
         
         // Ouvrir automatiquement l'étape suivante
         if (stepNumber < this.totalSteps) {
-            console.log(`⏰ [ACCORDION] Scheduling openStep(${stepNumber + 1}) in 500ms...`);
+            const nextStep = stepNumber + 1;
+            console.log(`⏰ [ACCORDION] Scheduling openStep(${nextStep}) in 300ms...`);
             setTimeout(() => {
-                console.log(`🚀 [ACCORDION] Now calling openStep(${stepNumber + 1})`);
-                this.openStep(stepNumber + 1);
-            }, 500);
+                // Rendre l'étape suivante visible si elle est cachée
+                if (typeof app !== 'undefined' && app.showStepWithAnimation) {
+                    app.showStepWithAnimation(nextStep);
+                } else {
+                    const el = document.getElementById(`globalStep${nextStep}`);
+                    if (el) el.style.display = 'block';
+                }
+                console.log(`🚀 [ACCORDION] Now calling openStep(${nextStep})`);
+                this.openStep(nextStep);
+            }, 300);
         } else {
             console.log(`🏁 [ACCORDION] This was the last step (${stepNumber}/${this.totalSteps})`);
         }

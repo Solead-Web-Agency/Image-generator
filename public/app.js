@@ -1271,40 +1271,37 @@ class ImageGeneratorApp {
     }
 
     async generateImage(prompt) {
-        // Si les clés ne sont ni locales ni serveur, erreur
-        if (!this.apiKey && !this.useServerKeys) {
-            throw new Error('Clé API OpenAI manquante. Configurez-la dans config.js ou dans les paramètres.');
+        // Récupérer provider + config depuis settingsModal si disponible
+        const provider = (typeof settingsModal !== 'undefined')
+            ? settingsModal.getActiveProvider()
+            : 'openai';
+        const clientApiKey = (typeof settingsModal !== 'undefined')
+            ? settingsModal.getApiKey(provider)
+            : (this.apiKey || '');
+
+        // Si pas de clé locale et pas de clé serveur, bloquer
+        if (!clientApiKey && !this.useServerKeys) {
+            if (typeof settingsModal !== 'undefined') settingsModal.open(true);
+            throw new Error('Clé API manquante. Configurez-la dans ⚙️ Config IA.');
         }
 
-        const model = this.modelSelect.value;
-        const size = this.sizeSelect.value;
+        const model = this.modelSelect?.value || (typeof settingsModal !== 'undefined' ? settingsModal.getModel() : 'dall-e-3');
+        const size   = this.sizeSelect?.value  || (typeof settingsModal !== 'undefined' ? settingsModal.getSize()  : '1024x1024');
+        const quality = this.qualitySelect?.value || (typeof settingsModal !== 'undefined' ? settingsModal.getQuality() : 'standard');
 
-        console.log('🎨 Génération image avec:', { model, size, promptLength: prompt.length, useServerKeys: this.useServerKeys });
+        console.log('🎨 Génération image:', { provider, model, size, quality, promptLength: prompt.length });
 
-        // Vérifier la compatibilité taille/modèle
-        if (model === 'dall-e-2' && (size === '1792x1024' || size === '1024x1792')) {
-            throw new Error('DALL-E 2 ne supporte que 1024x1024, 512x512 ou 256x256. Utilisez DALL-E 3 ou changez la taille.');
-        }
+        const finalPrompt = prompt.length > 4000 ? prompt.substring(0, 4000) : prompt;
 
-        // Limiter la longueur du prompt
-        let finalPrompt = prompt;
-        if (finalPrompt.length > 4000) {
-            console.warn('⚠️ Prompt trop long, truncation à 4000 caractères');
-            finalPrompt = prompt.substring(0, 4000);
-        }
-
-        // Construction du body selon le modèle
+        // Construction du body multi-provider
         const requestBody = {
-            model: model,
+            provider,
+            model,
             prompt: finalPrompt,
-            size: size
+            size,
+            quality,
+            ...(clientApiKey && !this.useServerKeys ? { apiKey: clientApiKey } : {})
         };
-
-        // DALL-E 3 supporte quality, DALL-E 2 non
-        if (model === 'dall-e-3') {
-            const quality = this.qualitySelect?.value || 'standard';
-            requestBody.quality = quality;
-        }
 
         console.log('📦 Request body:', requestBody);
 
@@ -1382,7 +1379,17 @@ class ImageGeneratorApp {
 
     refreshHistory() {
         const history = imageStorage.getHistoryByDate();
-        const dates = Object.keys(history).sort().reverse(); // Plus récent en premier
+        // Trier les dates du plus récent au plus ancien (format DD/MM/YYYY → parse en timestamp)
+        const parseDate = d => {
+            const [day, month, year] = d.split('/');
+            return new Date(`${year}-${month}-${day}`).getTime();
+        };
+        const dates = Object.keys(history).sort((a, b) => parseDate(b) - parseDate(a));
+
+        // Trier chaque groupe d'images du plus récent au plus ancien
+        dates.forEach(d => {
+            history[d].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        });
         
         this.historyCount.textContent = imageStorage.getHistory().length;
         
@@ -1429,12 +1436,20 @@ class ImageGeneratorApp {
                             <span class="gallery-time">${entry.time}</span>
                             <span class="gallery-style-badge">${entry.style || 'N/A'}</span>
                         </div>
+                        <button class="reprompt-btn" data-id="${entry.id}" title="Générer une nouvelle version">
+                            ✨ Optimiser
+                        </button>
                     </div>
                 `;
 
                 // Voir les détails (modal avec le prompt)
                 card.querySelector('.view-details-btn').addEventListener('click', () => {
                     this.showImageDetails(entry);
+                });
+
+                // Optimiser / re-prompter
+                card.querySelector('.reprompt-btn').addEventListener('click', () => {
+                    this.openRepromptModal(entry);
                 });
 
                 // Télécharger l'image
@@ -1515,6 +1530,215 @@ class ImageGeneratorApp {
                 document.body.removeChild(modal);
                 this.refreshHistory();
                 this.showMessage('Image supprimée', 'success');
+            }
+        });
+    }
+
+    openRepromptModal(entry) {
+        const imageUrl = entry.imageUrl || entry.thumbnailUrl;
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay reprompt-modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content reprompt-modal">
+                <div class="modal-header">
+                    <div class="reprompt-header-title">
+                        <span class="reprompt-badge">✨</span>
+                        <div>
+                            <h3>Optimiser cette image</h3>
+                            <p class="reprompt-subtitle">Décrivez les modifications souhaitées</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" id="repromptClose">✕</button>
+                </div>
+                <div class="reprompt-body">
+                    <div class="reprompt-preview-col">
+                        ${imageUrl
+                            ? `<img src="${imageUrl}" alt="${entry.subject}" class="reprompt-preview-img" />`
+                            : '<div class="gallery-no-image" style="height:160px;">❌ Image expirée</div>'
+                        }
+                        <div class="reprompt-original-meta">
+                            <span class="reprompt-meta-label">Sujet original</span>
+                            <span class="reprompt-meta-value">${entry.subject || '—'}</span>
+                            <span class="reprompt-meta-label" style="margin-top:0.4rem;">Style</span>
+                            <span class="reprompt-meta-value">${entry.style || '—'}</span>
+                            <span class="reprompt-meta-label" style="margin-top:0.4rem;">Modèle</span>
+                            <span class="reprompt-meta-value">${entry.model || '—'}</span>
+                        </div>
+                        <details class="reprompt-prompt-details">
+                            <summary>Voir le prompt original</summary>
+                            <pre class="reprompt-prompt-pre">${entry.prompt || 'Non disponible'}</pre>
+                        </details>
+                    </div>
+                    <div class="reprompt-form-col">
+                        <div class="reprompt-mode-toggle">
+                            <button class="reprompt-mode-btn active" data-mode="edit" title="Modifie les pixels de l'image originale (DALL-E Edit)">
+                                🖊️ Modifier l'image
+                            </button>
+                            <button class="reprompt-mode-btn" data-mode="regen" title="Régénère une nouvelle image à partir du prompt">
+                                🔄 Régénérer
+                            </button>
+                        </div>
+                        <p class="reprompt-mode-hint" id="repromptModeHint">
+                            Modifie directement les pixels de l'image existante via DALL-E Edit.
+                        </p>
+                        <label class="reprompt-label">Que souhaitez-vous modifier ?</label>
+                        <textarea id="repromptTextarea" class="reprompt-textarea"
+                            placeholder="Ex: Change le personnage en femme, ajoute de la neige, remplace le fond par un coucher de soleil..."
+                            rows="5"></textarea>
+                        <div class="reprompt-options" id="repromptRegenOptions" style="display:none;">
+                            <label class="reprompt-option-label">
+                                <input type="checkbox" id="repromptKeepStyle" checked />
+                                Conserver le style visuel original
+                            </label>
+                            <label class="reprompt-option-label">
+                                <input type="checkbox" id="repromptKeepSubject" checked />
+                                Conserver le sujet de base
+                            </label>
+                        </div>
+                        <div id="repromptStatus" class="reprompt-status" style="display:none;"></div>
+                        <div class="reprompt-actions">
+                            <button id="repromptCancel" class="btn-secondary">Annuler</button>
+                            <button id="repromptGenerate" class="btn-primary reprompt-generate-btn">
+                                <span class="btn-icon">✨</span>
+                                Appliquer les modifications
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const close = () => document.body.removeChild(modal);
+        modal.querySelector('#repromptClose').addEventListener('click', close);
+        modal.querySelector('#repromptCancel').addEventListener('click', close);
+        modal.addEventListener('click', e => { if (e.target === modal) close(); });
+
+        // Toggle mode edit / regen
+        let repromptMode = 'edit';
+        const modeHints = {
+            edit:  'Modifie directement les pixels de l\'image existante via DALL-E Edit.',
+            regen: 'Régénère une nouvelle image en intégrant vos modifications au prompt original.'
+        };
+        modal.querySelectorAll('.reprompt-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                repromptMode = btn.dataset.mode;
+                modal.querySelectorAll('.reprompt-mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+                modal.querySelector('#repromptModeHint').textContent = modeHints[repromptMode];
+                modal.querySelector('#repromptRegenOptions').style.display = repromptMode === 'regen' ? 'flex' : 'none';
+                modal.querySelector('#repromptGenerate').textContent = repromptMode === 'edit'
+                    ? '✨ Appliquer les modifications'
+                    : '🔄 Régénérer l\'image';
+            });
+        });
+
+        modal.querySelector('#repromptGenerate').addEventListener('click', async () => {
+            const modifications = modal.querySelector('#repromptTextarea').value.trim();
+            if (!modifications) {
+                modal.querySelector('#repromptTextarea').focus();
+                return;
+            }
+
+            const genBtn   = modal.querySelector('#repromptGenerate');
+            const statusEl = modal.querySelector('#repromptStatus');
+
+            genBtn.disabled = true;
+            genBtn.innerHTML = '<span class="btn-spinner"></span> En cours...';
+            statusEl.style.display = 'block';
+            statusEl.className = 'reprompt-status loading';
+            statusEl.textContent = 'Génération en cours...';
+
+            try {
+                let resultUrl;
+                let usedModel;
+                let usedPrompt;
+
+                if (repromptMode === 'edit' && imageUrl) {
+                    // ── Mode DALL-E Edit : modifier les pixels de l'image ──
+                    // URLs relatives → absolues ; data URLs laissées telles quelles
+                    const absoluteImageUrl = imageUrl.startsWith('/')
+                        ? `${window.location.origin}${imageUrl}`
+                        : imageUrl; // data: et http(s): passent directement
+                    const apiKey = typeof settingsModal !== 'undefined' ? settingsModal.getApiKey('openai') : '';
+                    const r = await fetch('/api/analyze-and-modify-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            imageUrl: absoluteImageUrl,
+                            modificationPrompt: modifications,
+                            styleData: null,
+                            ...(apiKey ? { apiKey } : {})
+                        })
+                    });
+                    const d = await r.json();
+                    if (!r.ok) throw new Error(d.error || `Erreur ${r.status}`);
+                    const tempUrl = d.newImageUrl || d.imageUrl;
+                    if (!tempUrl) throw new Error('Aucune image retournée par l\'API');
+                    usedModel  = d.model || 'gpt-image-1';
+                    usedPrompt = modifications;
+                    // Sauvegarder sur le serveur (l'URL OpenAI expire, et les base64 sont trop lourds)
+                    statusEl.textContent = 'Sauvegarde en cours...';
+                    try {
+                        const saved = await APIClient.saveImage(tempUrl, { subject: `${entry.subject} (optimisé)`, style: entry.style, model: usedModel });
+                        resultUrl = saved.imageUrl || saved.savedPath || tempUrl;
+                    } catch {
+                        resultUrl = tempUrl; // fallback sur l'URL temporaire
+                    }
+                } else {
+                    // ── Mode Régénération ──
+                    const keepStyle   = modal.querySelector('#repromptKeepStyle').checked;
+                    const keepSubject = modal.querySelector('#repromptKeepSubject').checked;
+                    // Prompt centré sur la modification, pas sur le contenu original
+                    let parts = [modifications];
+                    if (keepSubject && entry.subject) parts.push(`Sujet de base : ${entry.subject}`);
+                    if (keepStyle && entry.style && entry.style !== 'N/A') parts.push(`Style visuel : ${entry.style}`);
+                    usedPrompt = parts.join('\n\n');
+                    resultUrl  = await this.generateImage(usedPrompt);
+                    usedModel  = typeof settingsModal !== 'undefined' ? settingsModal.getModel() : entry.model;
+                }
+
+                // Sauvegarder dans l'historique
+                const savedEntry = imageStorage.addToHistory({
+                    imageUrl:     resultUrl,
+                    thumbnailUrl: resultUrl,
+                    originalUrl:  resultUrl,
+                    subject:      `${entry.subject || 'Image'} (optimisé)`,
+                    style:        entry.style,
+                    prompt:       usedPrompt,
+                    model:        usedModel,
+                    size:         typeof settingsModal !== 'undefined' ? settingsModal.getSize() : (entry.size || '1024x1024'),
+                    quality:      typeof settingsModal !== 'undefined' ? settingsModal.getQuality() : (entry.quality || 'standard'),
+                    mode:         entry.mode || 'manual',
+                    parentId:     entry.id,
+                    modifications
+                });
+
+                // Sauvegarde serveur pour le mode regen (best-effort, edit déjà sauvegardé)
+                if (repromptMode !== 'edit') {
+                    try { await APIClient.saveImage(resultUrl, { subject: savedEntry.subject, style: savedEntry.style, model: savedEntry.model }); } catch {}
+                }
+
+                statusEl.className = 'reprompt-status success';
+                statusEl.innerHTML = '✅ Nouvelle version générée ! <a href="#" id="repromptViewHistory">Voir dans l\'historique</a>';
+                modal.querySelector('#repromptViewHistory')?.addEventListener('click', e => {
+                    e.preventDefault();
+                    close();
+                    this.refreshHistory();
+                    document.querySelector('details')?.setAttribute('open', '');
+                });
+
+                genBtn.disabled = false;
+                genBtn.innerHTML = repromptMode === 'edit'
+                    ? '✨ Appliquer encore'
+                    : '🔄 Régénérer encore';
+                this.refreshHistory();
+
+            } catch (err) {
+                statusEl.className = 'reprompt-status error';
+                statusEl.textContent = `Erreur : ${err.message}`;
+                genBtn.disabled = false;
+                genBtn.innerHTML = '↩ Réessayer';
             }
         });
     }
@@ -1624,52 +1848,63 @@ class ImageGeneratorApp {
         // URL
         urlDisplay.textContent = url;
         
+        // Couleurs IA suggérées (pré-sélectionnées) + toutes les couleurs extraites
+        const aiColors = style.colorPalette || [];
+        const extractedColors = allColors && allColors.length > 0 ? allColors : [];
+        
+        // Fusionner: IA en premier, puis les autres non présents dans l'IA
+        const aiSet = new Set(aiColors.map(c => c.toLowerCase()));
+        const extraColors = extractedColors.filter(c => !aiSet.has(c.toLowerCase()));
+        const allColorsMerged = [...aiColors, ...extraColors];
+        
+        // Pré-sélectionner les couleurs IA
+        this.selectedColors = [...aiColors];
+        
         // Colors - Sélecteur interactif
         colorsDiv.innerHTML = '';
-        const colors = allColors && allColors.length > 0 ? allColors : (style.colorPalette || []);
         
-        if (colors.length > 0) {
-            // Header avec stats et actions
-            const header = document.createElement('div');
-            header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;';
-            header.innerHTML = `
-                <div style="color: var(--text-gray); font-size: 0.9rem;">
-                    ${colors.length} couleur${colors.length > 1 ? 's' : ''} détectée${colors.length > 1 ? 's' : ''} • 
-                    <span id="selectedColorsCount">0</span> sélectionnée${this.selectedColors.length > 1 ? 's' : ''}
+        if (allColorsMerged.length > 0) {
+            colorsDiv.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.75rem;">
+                    <span style="color:var(--text-gray); font-size:0.85rem;">
+                        ${allColorsMerged.length} couleur${allColorsMerged.length > 1 ? 's' : ''} •
+                        <strong><span id="selectedColorsCount">${this.selectedColors.length}</span> sélectionnée${this.selectedColors.length > 1 ? 's' : ''}</strong>
+                    </span>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn-secondary btn-small" onclick="app.selectAllColors()">Tout</button>
+                        <button class="btn-secondary btn-small" onclick="app.deselectAllColors()">Aucune</button>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 0.5rem;">
-                    <button class="btn-secondary btn-small" onclick="app.selectAllColors()">Tout sélectionner</button>
-                    <button class="btn-secondary btn-small" onclick="app.deselectAllColors()">Tout désélectionner</button>
-                </div>
+                ${aiColors.length > 0 ? `
+                <p style="font-size:0.78rem; color:var(--text-gray); margin:0 0 1rem 0;">
+                    <span style="color:#6366f1;">●</span> Suggérées par l'IA (pré-cochées) &nbsp;·&nbsp;
+                    <span style="opacity:0.4;">●</span> Extraites du site
+                </p>` : ''}
+                <div class="colors-picker-grid" id="colorsPickerGrid"></div>
             `;
-            colorsDiv.appendChild(header);
-            
-            // Grille de couleurs avec checkboxes
-            const grid = document.createElement('div');
-            grid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.75rem;';
-            
-            colors.forEach((color, index) => {
-                const colorCard = document.createElement('div');
-                colorCard.className = 'color-selector-card';
-                colorCard.setAttribute('data-color', color);
-                colorCard.innerHTML = `
-                    <input type="checkbox" class="color-checkbox" id="color-${index}" data-color="${color}" />
-                    <label for="color-${index}" class="color-swatch-selectable" style="background-color: ${color};" title="${color}">
+
+            const grid = document.getElementById('colorsPickerGrid');
+            allColorsMerged.forEach((color, index) => {
+                const isAiColor = aiSet.has(color.toLowerCase());
+                const isChecked = this.selectedColors.some(c => c.toLowerCase() === color.toLowerCase());
+                const card = document.createElement('div');
+                card.className = 'color-selector-card' + (isAiColor ? ' ai-suggested' : '');
+                card.setAttribute('data-color', color);
+                card.innerHTML = `
+                    <input type="checkbox" class="color-checkbox" id="color-${index}" data-color="${color}" ${isChecked ? 'checked' : ''} />
+                    <label for="color-${index}" class="color-swatch-selectable" style="background-color:${color};" title="${color}">
                         <span class="color-check">✓</span>
                     </label>
                     <span class="color-label">${color}</span>
                 `;
-                grid.appendChild(colorCard);
+                grid.appendChild(card);
             });
-            
-            colorsDiv.appendChild(grid);
-            
-            // Ajouter event listeners pour les checkboxes
-            document.querySelectorAll('.color-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', (e) => this.handleColorSelection(e));
+
+            document.querySelectorAll('.color-checkbox').forEach(cb => {
+                cb.addEventListener('change', (e) => this.handleColorSelection(e));
             });
         } else {
-            colorsDiv.innerHTML = '<p style="color: var(--text-gray);">Aucune couleur détectée</p>';
+            colorsDiv.innerHTML = '<p style="color:var(--text-gray);">Aucune couleur détectée</p>';
         }
         
         // Fonts
@@ -1768,6 +2003,9 @@ class ImageGeneratorApp {
         promptGenerator.setCustomStyle(this.scannedStyleData);
         
         this.showMessage('✅ Style validé ! Passons à la suite', 'success');
+        
+        // Rendre l'étape 3 visible avant de la compléter
+        this.showStepWithAnimation(3);
         
         // Move to next step
         accordionManager.completeStep(2);
@@ -2341,22 +2579,29 @@ class ImageGeneratorApp {
         this.imagesGrid.innerHTML = '';
         
         images.forEach((img, index) => {
+            const hasDims = img.width && img.height;
+            const sizeLabel = hasDims ? `${img.width}×${img.height}` : 'dim. inconnues';
+            const sizeKb = img.fileSize ? ` · ${Math.round(img.fileSize / 1024)} Ko` : '';
+            const loadingBadge = img.loading === 'lazy' ? '<span class="img-badge">lazy</span>' : '';
+
             const imageCard = document.createElement('div');
             imageCard.className = 'image-card';
             imageCard.innerHTML = `
                 <input type="checkbox" class="image-checkbox" id="img-${index}" data-index="${index}" />
                 <label for="img-${index}" class="image-preview-wrapper">
-                    <img src="${img.url}" alt="${img.alt || 'Image'}" class="image-preview" loading="lazy" />
+                    <img src="${img.url}" alt="${img.alt || 'Image'}" class="image-preview" loading="lazy"
+                         onerror="this.parentElement.parentElement.style.opacity='0.4'" />
                     <div class="image-check-overlay">
                         <span class="image-check-icon">✓</span>
                     </div>
+                    <div class="image-dims-badge">${sizeLabel}${sizeKb}</div>
                 </label>
                 <div class="image-info">
-                    <div class="image-alt" title="${img.alt || 'Sans description'}">${img.alt || 'Sans description'}</div>
-                    ${img.width && img.height ? `<div class="image-dimensions">${img.width}×${img.height}</div>` : ''}
+                    <div class="image-alt" title="${img.alt || img.url}">${img.alt || '—'}</div>
+                    ${loadingBadge}
                 </div>
             `;
-            
+
             this.imagesGrid.appendChild(imageCard);
         });
         
@@ -2474,12 +2719,12 @@ class ImageGeneratorApp {
                     this.loadingMessage.textContent = `Sauvegarde de l'image ${i + 1}/${totalImages}...`;
                     
                     const saveResult = await APIClient.saveImage(data.newImageUrl, {
-                        style: this.selectedStyle,
+                        style: 'dalle-edit',
                         subject: `Modified: ${imageData.alt || 'image'}`,
-                        prompt: data.dallePrompt,
+                        prompt: modificationPrompt,
                         originalImageUrl: imageData.url,
                         modificationPrompt: modificationPrompt,
-                        model: 'dall-e-3',
+                        model: 'dall-e-2',
                         size: '1024x1024',
                         quality: 'standard',
                         mode: 'from-images'
@@ -2490,9 +2735,9 @@ class ImageGeneratorApp {
                         imageUrl: saveResult.path,
                         originalUrl: data.newImageUrl,
                         filename: saveResult.filename,
-                        style: this.selectedStyle,
+                        style: 'dalle-edit',
                         subject: `Modified: ${imageData.alt || 'image'}`,
-                        prompt: data.dallePrompt
+                        prompt: modificationPrompt
                     });
                     
                     results.push({
@@ -2537,80 +2782,63 @@ class ImageGeneratorApp {
     }
     
     displayModificationResults(results) {
-        // Afficher l'étape 4 avec les résultats
-        this.showStepWithAnimation(4);
-        
-        const promptSection = document.getElementById('promptSection');
-        if (promptSection) {
-            promptSection.style.display = 'none';
-        }
-        
-        // Créer une section de résultats
-        const generatedPromptDiv = document.getElementById('generatedPrompt');
-        if (!generatedPromptDiv) return;
-        
-        generatedPromptDiv.innerHTML = `
-            <div style="background: var(--light-bg); padding: 1.5rem; border-radius: 12px;">
-                <h3 style="margin: 0 0 1rem 0; color: var(--text-dark);">
-                    🎨 Résultats de la modification
-                </h3>
-                <div class="modification-results-grid">
-                    ${results.map((result, index) => {
-                        if (result.success) {
-                            return `
-                                <div class="modification-result-card success">
-                                    <div class="result-images">
-                                        <div class="result-image-wrapper">
-                                            <img src="${result.original.url}" alt="Original" />
-                                            <span class="result-label">Original</span>
-                                        </div>
-                                        <div class="result-arrow">→</div>
-                                        <div class="result-image-wrapper">
-                                            <img src="${result.modified.newImageUrl}" alt="Modifiée" />
-                                            <span class="result-label">Modifiée</span>
-                                        </div>
-                                    </div>
-                                    <div class="result-info">
-                                        <p class="result-alt">${result.original.alt || 'Sans description'}</p>
-                                        <span class="result-status success">✓ Succès</span>
-                                    </div>
-                                </div>
-                            `;
-                        } else {
-                            return `
-                                <div class="modification-result-card failed">
-                                    <div class="result-images">
-                                        <div class="result-image-wrapper">
-                                            <img src="${result.original.url}" alt="Original" />
-                                            <span class="result-label">Original</span>
-                                        </div>
-                                    </div>
-                                    <div class="result-info">
-                                        <p class="result-alt">${result.original.alt || 'Sans description'}</p>
-                                        <span class="result-status failed">✗ Échec: ${result.error}</span>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    }).join('')}
+        // Supprimer les anciens résultats s'ils existent
+        const old = document.getElementById('imagesModificationResults');
+        if (old) old.remove();
+
+        const successCount = results.filter(r => r.success).length;
+        const failCount    = results.filter(r => !r.success).length;
+
+        const container = document.createElement('div');
+        container.id = 'imagesModificationResults';
+        container.style.cssText = 'margin-top: 2rem;';
+        container.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.5rem;">
+                <h3 style="margin:0; color:var(--text-dark);">🎨 Résultats — Avant / Après</h3>
+                <div>
+                    ${successCount > 0 ? `<span style="background:#d1fae5; color:#065f46; padding:4px 10px; border-radius:20px; font-size:0.85rem; margin-right:6px;">✓ ${successCount} succès</span>` : ''}
+                    ${failCount    > 0 ? `<span style="background:#fee2e2; color:#991b1b; padding:4px 10px; border-radius:20px; font-size:0.85rem;">✗ ${failCount} échec${failCount > 1 ? 's' : ''}</span>` : ''}
                 </div>
             </div>
+            <div class="modification-results-grid">
+                ${results.map(result => {
+                    if (result.success) {
+                        return `
+                            <div class="modification-result-card success">
+                                <div class="result-images">
+                                    <div class="result-image-wrapper">
+                                        <img src="${result.original.url}" alt="Original" loading="lazy" />
+                                        <span class="result-label">Original</span>
+                                    </div>
+                                    <div class="result-arrow">→</div>
+                                    <div class="result-image-wrapper">
+                                        <img src="${result.modified.newImageUrl}" alt="Modifiée" loading="lazy" />
+                                        <span class="result-label">Modifiée ✓</span>
+                                    </div>
+                                </div>
+                                ${result.original.alt ? `<p class="result-alt">${result.original.alt}</p>` : ''}
+                            </div>`;
+                    } else {
+                        return `
+                            <div class="modification-result-card failed">
+                                <div class="result-images">
+                                    <div class="result-image-wrapper">
+                                        <img src="${result.original.url}" alt="Original" loading="lazy" />
+                                        <span class="result-label">Original</span>
+                                    </div>
+                                </div>
+                                <p class="result-alt" style="color:#ef4444;">✗ ${result.error}</p>
+                            </div>`;
+                    }
+                }).join('')}
+            </div>
         `;
-        
-        // Afficher la section
-        const apiConfigSection = document.querySelector('.api-config');
-        if (apiConfigSection) {
-            apiConfigSection.style.display = 'none';
-        }
-        
-        const generateImageBtn = document.getElementById('generateImageBtn');
-        if (generateImageBtn) {
-            generateImageBtn.style.display = 'none';
-        }
-        
-        // Compléter l'étape 3 et ouvrir l'étape 4
-        if (typeof accordionManager !== 'undefined') {
-            accordionManager.completeStep(3);
+
+        // Injecter dans fromImagesContent (étape 2/3 selon le mode)
+        const container3 = this.fromImagesContent;
+        if (container3) {
+            container3.appendChild(container);
+            container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     }
 }
