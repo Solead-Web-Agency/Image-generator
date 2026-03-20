@@ -288,25 +288,28 @@ class PromptGenerator {
      * Génère un prompt enrichi avec l'aide de l'IA (pour utilisation future avec GPT)
      */
     async generateEnrichedPromptWithAI(apiKey) {
-        const basePrompt = this.generatePrompt();
+        // Si pas de style sélectionné, enrichir juste le sujet
+        let basePrompt;
+        try {
+            basePrompt = this.generatePrompt();
+        } catch {
+            basePrompt = this.userSubject || 'image';
+        }
         
-        const systemMessage = `Tu es un expert en génération de prompts pour DALL-E. 
+        const hasStyle = !!this.selectedStyle;
+        const systemMessage = hasStyle
+            ? `Tu es un expert en génération de prompts pour DALL-E. 
 Ta tâche est de prendre un prompt de base qui décrit un style visuel et un sujet, 
 et de l'enrichir pour créer un prompt optimal pour DALL-E qui préserve parfaitement 
 la Direction Artistique tout en illustrant le nouveau sujet de manière créative.
+Garde la cohérence du style, des couleurs, de l'éclairage et de la composition.`
+            : `Tu es un expert en génération de prompts pour DALL-E.
+Ta tâche est de transformer une courte description en un prompt détaillé et efficace.
+Enrichis la description avec des détails visuels concrets : composition, lumière, couleurs, style artistique, ambiance.`;
 
-Garde la cohérence du style, des couleurs, de l'éclairage et de la composition.
-Sois créatif dans l'application du sujet au style visuel défini.`;
-
-        const userMessage = `Voici le prompt de base à enrichir:\n\n${basePrompt}\n\n
-Génère un prompt DALL-E optimisé qui:
-1. Préserve EXACTEMENT le style visuel décrit
-2. Illustre le sujet de manière créative et pertinente
-3. Maintient la cohérence de Direction Artistique
-4. Est clair, précis et détaillé
-5. Ne dépasse pas 1000 caractères
-
-Retourne uniquement le prompt final, sans introduction ni explication.`;
+        const userMessage = hasStyle
+            ? `Voici le prompt de base à enrichir:\n\n${basePrompt}\n\nGénère un prompt DALL-E optimisé qui préserve EXACTEMENT le style visuel et illustre le sujet de manière créative. Retourne uniquement le prompt final, sans introduction ni explication. 1000 caractères max.`
+            : `Voici le sujet à transformer en prompt DALL-E:\n\n${basePrompt}\n\nGénère un prompt détaillé et efficace pour ce sujet. Retourne uniquement le prompt final, sans introduction ni explication. 1000 caractères max.`;
 
         try {
             const response = await fetch('https://api.openai.com/v1/chat/completions', {

@@ -60,8 +60,9 @@ class ImageGeneratorApp {
         this.imagesGrid = document.getElementById('imagesGrid');
         this.imagesFoundCount = document.getElementById('imagesFoundCount');
         this.imagesSelectedCount = document.getElementById('imagesSelectedCount');
-        this.imagesModificationPrompt = document.getElementById('imagesModificationPrompt');
         this.modifySelectedImagesBtn = document.getElementById('modifySelectedImagesBtn');
+        this.modifyImagesCount = document.getElementById('modifyImagesCount');
+        this.fromImagesUploadInput = document.getElementById('fromImagesUploadInput');
         this.selectedImages = [];
         this.scannedImages = [];
         
@@ -144,7 +145,13 @@ class ImageGeneratorApp {
         
         // Manual mode
         if (this.generatePromptBtn) {
-            this.generatePromptBtn.addEventListener('click', () => this.handleGeneratePrompt());
+            this.generatePromptBtn.addEventListener('click', async () => {
+                await this.handleGeneratePrompt();
+                // Avancer vers Step 2 seulement si le prompt a bien été généré
+                if (this.currentMode === 'manual' && this.generatedPrompt) {
+                    this._completeStep1AndShowStep2();
+                }
+            });
         }
         
         // Scan tabs
@@ -167,13 +174,30 @@ class ImageGeneratorApp {
         this.scanHtmlBtn.addEventListener('click', () => this.handleScanHtml());
         // Note: analyzeSelectedBtn is now attached dynamically in displayScannedSections()
         this.generateAllBtn.addEventListener('click', () => this.handleGenerateAll());
-        
+
         // CSV buttons
         this.csvFileInput.addEventListener('change', (e) => this.handleCSVFileUpload(e));
         this.parseCSVBtn.addEventListener('click', () => this.handleParseCSV());
         this.analyzeCSVBtn.addEventListener('click', () => this.handleAnalyzeCSV());
         this.generateCSVImagesBtn.addEventListener('click', () => this.handleGenerateCSVImages());
         
+        // From Images — onglets URL / Upload
+        document.querySelectorAll('.fi-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.fiTab;
+                document.querySelectorAll('.fi-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.fi-tab-content').forEach(c => c.classList.remove('active'));
+                const content = document.getElementById(tab + 'Tab');
+                if (content) content.classList.add('active');
+            });
+        });
+
+        // From Images — upload fichier
+        if (this.fromImagesUploadInput) {
+            this.fromImagesUploadInput.addEventListener('change', (e) => this.handleFromImagesUpload(e));
+        }
+
         // From Images buttons
         if (this.scanPageImagesBtn) {
             this.scanPageImagesBtn.addEventListener('click', () => this.handleScanPageImages());
@@ -261,10 +285,7 @@ class ImageGeneratorApp {
             });
         }
 
-        // Generate prompt button
-        if (this.generatePromptBtn) {
-            this.generatePromptBtn.addEventListener('click', () => this.handleGeneratePrompt());
-        }
+        // Generate prompt button — listener unique, géré dans setupModeListeners()
 
         // Copy prompt button
         if (this.copyPromptBtn) {
@@ -318,32 +339,7 @@ class ImageGeneratorApp {
             const data = await response.json();
             
             if (data.success && data.configured.openai) {
-                // Les clés sont configurées côté serveur
                 console.log('✅ Clés API configurées sur le serveur');
-                
-                // Cacher le champ de saisie et afficher un message
-                const apiKeyGroup = this.apiKeyInput?.parentElement;
-                if (apiKeyGroup) {
-                    apiKeyGroup.style.display = 'none';
-                    
-                    // Ajouter un badge "Configuré sur le serveur"
-                    const badge = document.createElement('div');
-                    badge.className = 'server-config-badge';
-                    badge.innerHTML = '✅ Clés API configurées sur le serveur';
-                    badge.style.cssText = `
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: white;
-                        padding: 12px 20px;
-                        border-radius: 8px;
-                        text-align: center;
-                        font-weight: 500;
-                        margin-bottom: 20px;
-                        box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
-                    `;
-                    apiKeyGroup.parentElement.insertBefore(badge, apiKeyGroup);
-                }
-                
-                // Forcer l'utilisation des clés serveur (pas besoin de clé locale)
                 this.useServerKeys = true;
             }
         } catch (error) {
@@ -453,17 +449,12 @@ class ImageGeneratorApp {
         this.validateForm();
         
         this.showMessage(`Style ${style} sélectionné ✅`, 'success');
-        
-        // Afficher l'étape 3 avec animation
-        this.showStepWithAnimation(3);
-        
-        // Compléter l'étape 2 et passer à l'étape 3
-        console.log('🔄 Calling accordionManager.completeStep(2)...');
+
+        // Préparer Step 4 selon le mode avant de l'ouvrir
+        this.showStep4ModeContent();
+
         if (typeof accordionManager !== 'undefined') {
             accordionManager.completeStep(2);
-            console.log('✅ Step 2 completed, should open step 3');
-        } else {
-            console.error('❌ accordionManager is undefined!');
         }
     }
 
@@ -493,10 +484,9 @@ class ImageGeneratorApp {
             return;
         }
         
-        const hasStyle = this.selectedStyle !== null;
         const hasSubject = this.subjectInput.value.trim().length > 0;
         
-        this.generatePromptBtn.disabled = !(hasStyle && hasSubject);
+        this.generatePromptBtn.disabled = !hasSubject;
     }
 
     async handleGeneratePrompt() {
@@ -518,14 +508,22 @@ class ImageGeneratorApp {
                     this.showMessage('Prompt optimisé généré avec l\'IA !', 'success');
                 } catch (error) {
                     console.error('Error with AI enrichment:', error);
-                    // Fallback au prompt de base si l'enrichissement échoue
-                    this.generatedPrompt = promptGenerator.generatePrompt();
+                    // Fallback : utiliser generatePrompt() si style dispo, sinon le sujet brut
+                    try {
+                        this.generatedPrompt = promptGenerator.generatePrompt();
+                    } catch {
+                        this.generatedPrompt = subject;
+                    }
                     this.showMessage('Prompt de base généré (erreur lors de l\'enrichissement IA)', 'error');
                 }
             } else {
-                // Utiliser le générateur de base
-                this.generatedPrompt = promptGenerator.generatePrompt();
-                this.showMessage('Prompt généré ! Ajoutez une clé API pour l\'enrichir avec l\'IA.', 'success');
+                // Utiliser le générateur de base si style dispo, sinon le sujet brut
+                try {
+                    this.generatedPrompt = promptGenerator.generatePrompt();
+                } catch {
+                    this.generatedPrompt = subject;
+                }
+                this.showMessage('Prompt généré ! Le style sera appliqué à la génération.', 'success');
             }
 
             // Afficher le prompt
@@ -540,19 +538,47 @@ class ImageGeneratorApp {
     }
 
     displayPrompt(prompt) {
-        this.generatedPromptDiv.textContent = prompt;
-        this.promptSection.style.display = 'block';
-        
-        // Afficher l'étape 4 avec animation
-        this.showStepWithAnimation(4);
-        
-        // Scroll vers la section
-        this.promptSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        
-        // Compléter l'étape 3 et ouvrir l'étape 4
-        if (typeof accordionManager !== 'undefined') {
-            accordionManager.completeStep(3);
+        // Affichage inline dans Step 1 (mode manuel)
+        const inlinePreview = document.getElementById('manualPromptPreview');
+        const inlineText    = document.getElementById('manualPromptText');
+        const inlineEdit    = document.getElementById('manualPromptEdit');
+        const editBtn       = document.getElementById('editPromptInlineBtn');
+
+        if (inlinePreview && inlineText) {
+            inlineText.textContent = prompt;
+            inlinePreview.style.display = 'block';
+
+            // Bouton Modifier inline
+            if (editBtn && !editBtn._bound) {
+                editBtn._bound = true;
+                editBtn.addEventListener('click', () => {
+                    const editing = inlineEdit.style.display === 'block';
+                    if (editing) {
+                        // Valider la modification
+                        this.generatedPrompt = inlineEdit.value.trim() || prompt;
+                        inlineText.textContent = this.generatedPrompt;
+                        inlineEdit.style.display = 'none';
+                        inlineText.style.display = 'block';
+                        editBtn.textContent = '✏️ Modifier';
+                    } else {
+                        inlineEdit.value = inlineText.textContent;
+                        inlineEdit.style.display = 'block';
+                        inlineText.style.display = 'none';
+                        editBtn.textContent = '✅ Valider';
+                    }
+                });
+                // Sync les modifs en temps réel
+                inlineEdit.addEventListener('input', () => {
+                    this.generatedPrompt = inlineEdit.value;
+                });
+            }
+
+            inlinePreview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
+
+        // Mise à jour de la zone legacy (Step 4) si elle existe
+        if (this.generatedPromptDiv) this.generatedPromptDiv.textContent = prompt;
+        if (this.promptSection)     this.promptSection.style.display = 'block';
     }
 
     handleCopyPrompt() {
@@ -755,39 +781,107 @@ class ImageGeneratorApp {
 
     // ==================== FONCTIONS MODE SCAN ====================
 
+    /** Complète Step 1 et rend Step 2 visible+ouvert (appelé par les boutons d'action de chaque mode) */
+    _completeStep1AndShowStep2() {
+        const s1 = document.getElementById('globalStep1');
+        if (s1) s1.classList.remove('step-isolated');
+        const step2 = document.getElementById('globalStep2');
+        if (step2) step2.style.display = 'block';
+        accordionManager.completeStep(1);
+    }
+
+    showStep4ModeContent() {
+        const mode = this.currentMode;
+        // Masquer toutes les sections Step 4
+        ['step4Manual', 'step4Scan', 'step4CSV'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+
+        if (mode === 'manual') {
+            // Afficher le prompt généré (s'il existe) + le bouton générer
+            const ps = document.getElementById('promptSection');
+            if (ps && this.generatedPrompt) ps.style.display = 'block';
+            const el = document.getElementById('step4Manual');
+            if (el) el.style.display = 'block';
+        } else if (mode === 'scan') {
+            const el = document.getElementById('step4Scan');
+            if (el) el.style.display = 'block';
+        } else if (mode === 'csv') {
+            const el = document.getElementById('step4CSV');
+            if (el) {
+                el.style.display = 'block';
+                const count = document.getElementById('step4CSVCount');
+                const ready = (this.csvTasks || []).filter(t => t.status === 'ready').length;
+                if (count) count.textContent = `${ready} image${ready > 1 ? 's' : ''} à générer`;
+            }
+        } else {
+            // Mode inconnu : afficher au moins le bouton générer par défaut
+            const el = document.getElementById('step4Manual');
+            if (el) el.style.display = 'block';
+        }
+    }
+
     handleModeChange(selectedBtn) {
-        // Afficher l'étape 2 avec animation maintenant qu'un mode est sélectionné
-        this.showStepWithAnimation(2);
-        
-        // Mettre à jour les boutons
+        // Mettre à jour les boutons actif / grisés
         this.modeButtons.forEach(btn => btn.classList.remove('active'));
         selectedBtn.classList.add('active');
+        document.getElementById('modeSelector')?.classList.add('has-selection');
+
+        // step-isolated est retiré seulement dans _completeStep1AndShowStep2, pas ici
 
         const mode = selectedBtn.dataset.mode;
         this.currentMode = mode;
 
-        // Cacher tous les contenus de mode
-        this.manualContent.style.display = 'none';
-        this.scanContent.style.display = 'none';
-        this.csvContent.style.display = 'none';
-        this.fromImagesContent.style.display = 'none';
-
-        // Afficher le contenu approprié
-        if (mode === 'manual') {
-            this.manualContent.style.display = 'block';
-        } else if (mode === 'scan') {
-            this.scanContent.style.display = 'block';
-        } else if (mode === 'csv') {
-            this.csvContent.style.display = 'block';
-        } else if (mode === 'from-images') {
-            this.fromImagesContent.style.display = 'block';
+        // Afficher le container inline dans Step 1
+        const modeContainer = document.getElementById('modeContentContainer');
+        if (modeContainer) {
+            modeContainer.style.display = 'block';
+            // Scroll doux vers le contenu affiché
+            setTimeout(() => {
+                modeContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         }
 
-        // Mettre à jour le titre/description de l'étape 3
-        accordionManager.updateStep3Content(mode);
+        // Cacher tous les panneaux puis afficher le bon
+        [this.manualContent, this.scanContent, this.csvContent, this.fromImagesContent]
+            .forEach(el => { if (el) el.style.display = 'none'; });
+        const contentMap = { manual: this.manualContent, scan: this.scanContent, csv: this.csvContent, 'from-images': this.fromImagesContent };
+        if (contentMap[mode]) contentMap[mode].style.display = 'block';
 
-        // Compléter l'étape 1 et passer à l'étape 2
-        accordionManager.completeStep(1);
+        // Bouton "Changer de mode" : réinitialise tout
+        const changeBtn = document.getElementById('changeModeBtn');
+        if (changeBtn) {
+            changeBtn.onclick = () => {
+                selectedBtn.classList.remove('active');
+                document.getElementById('modeSelector')?.classList.remove('has-selection');
+                if (modeContainer) modeContainer.style.display = 'none';
+                this.currentMode = null;
+                // Réinitialiser le preview du prompt manuel
+                const p = document.getElementById('manualPromptPreview');
+                if (p) p.style.display = 'none';
+                this.generatedPrompt = null;
+                [2, 3, 4, 5].forEach(n => {
+                    const s = document.getElementById(`globalStep${n}`);
+                    if (s) { s.style.display = 'none'; s.classList.remove('active', 'completed'); }
+                });
+                const s1 = document.getElementById('globalStep1');
+                if (s1) {
+                    s1.classList.remove('completed');
+                    s1.classList.add('active');
+                    s1.classList.add('step-isolated'); // masque la flèche ↓
+                }
+                accordionManager.completedSteps = accordionManager.completedSteps.filter(s => s !== 1);
+            };
+        }
+
+        if (mode === 'from-images') {
+            // Pas de style → masquer Step 2, l'utilisateur reste dans Step 1
+            const step2 = document.getElementById('globalStep2');
+            if (step2) { step2.style.display = 'none'; step2.classList.remove('active', 'completed'); }
+        }
+        // Pas d'avancement automatique : Step 1 sera complété quand l'utilisateur
+        // aura rempli le contenu et cliqué sur le bouton d'action correspondant
     }
 
     async handleScanUrl() {
@@ -1071,11 +1165,6 @@ class ImageGeneratorApp {
             this.showMessage('Veuillez configurer votre clé API OpenAI', 'error');
             return;
         }
-
-        if (!this.selectedStyle) {
-            this.showMessage('Veuillez d\'abord sélectionner un style visuel (Étape 2)', 'error');
-            return;
-        }
         
         if (!this.selectedSections || this.selectedSections.size === 0) {
             this.showMessage('Veuillez cocher au moins une section', 'error');
@@ -1089,15 +1178,18 @@ class ImageGeneratorApp {
             const allSections = pageScanner.getScannedContent();
             const selectedSectionsData = Array.from(this.selectedSections).map(index => allSections[index]);
             
-            // Analyze with AI
+            // Analyze with AI (style can be null here, chosen later in Step 2)
             const suggestions = await pageScanner.analyzeSpecificSections(
                 selectedSectionsData, 
                 this.apiKey, 
-                this.selectedStyle
+                this.selectedStyle // null si pas encore choisi
             );
             
             this.displaySuggestions(suggestions);
             this.showMessage(`✅ ${suggestions.length} sujet${suggestions.length > 1 ? 's' : ''} d'image généré${suggestions.length > 1 ? 's' : ''} !`, 'success');
+
+            // Avancer vers Step 2 (style visuel) une fois l'analyse terminée
+            this._completeStep1AndShowStep2();
         } catch (error) {
             console.error('Error analyzing with AI:', error);
             this.showMessage(`❌ Erreur: ${error.message}`, 'error');
@@ -2003,11 +2095,7 @@ class ImageGeneratorApp {
         promptGenerator.setCustomStyle(this.scannedStyleData);
         
         this.showMessage('✅ Style validé ! Passons à la suite', 'success');
-        
-        // Rendre l'étape 3 visible avant de la compléter
-        this.showStepWithAnimation(3);
-        
-        // Move to next step
+        this.showStep4ModeContent();
         accordionManager.completeStep(2);
     }
 
@@ -2057,6 +2145,7 @@ class ImageGeneratorApp {
             this.showMessage(`${files.length} fichier(s) analysé(s) avec succès ! (Fonction en développement)`, 'success');
             
             this.selectedStyle = 'upload-' + Date.now();
+            this.showStep4ModeContent();
             accordionManager.completeStep(2);
             
         } catch (error) {
@@ -2201,8 +2290,7 @@ class ImageGeneratorApp {
             promptGenerator.setCustomStyle(this.customStyleData);
             
             this.showMessage(`✅ Style extrait de ${this.selectedLibraryImages.length} image(s) !`, 'success');
-            
-            // Passer à l'étape suivante
+            this.showStep4ModeContent();
             accordionManager.completeStep(2);
             
         } catch (error) {
@@ -2335,11 +2423,6 @@ class ImageGeneratorApp {
             return;
         }
 
-        if (!this.selectedStyle) {
-            this.showMessage('Veuillez d\'abord sélectionner un style visuel', 'error');
-            return;
-        }
-
         if (!this.apiKey && !this.useServerKeys) {
             this.showMessage('Clé API OpenAI requise', 'error');
             return;
@@ -2353,9 +2436,10 @@ class ImageGeneratorApp {
             this.displayCSVTasks(this.csvTasks);
             
             this.hideLoading();
-            // Ouvrir l'étape 3
-            this.openCSVStep(3);
             this.showMessage(`${this.csvTasks.length} sujets générés par l'IA`, 'success');
+
+            // Avancer vers Step 2 (style), puis Step 4 affichera le bouton CSV
+            this._completeStep1AndShowStep2();
             
         } catch (error) {
             console.error('Error analyzing CSV:', error);
@@ -2505,7 +2589,33 @@ class ImageGeneratorApp {
     }
     
     // ==================== FONCTIONS MODE FROM-IMAGES ====================
-    
+
+    handleFromImagesUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Mettre à jour le libellé de la zone d'upload
+        const label = document.getElementById('fromImagesUploadLabel');
+        if (label) label.textContent = file.name;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target.result;
+            const imageObj = {
+                url: dataUrl,
+                alt: file.name,
+                width: null,
+                height: null,
+                isUpload: true
+            };
+            this.scannedImages = [imageObj];
+            this.selectedImages = [];
+            this.displayScannedImages([imageObj]);
+            this.showMessage('✅ Image chargée — cochez-la et saisissez vos instructions', 'success');
+        };
+        reader.readAsDataURL(file);
+    }
+
     async handleScanPageImages() {
         const url = this.imagesScanUrl.value.trim();
         
@@ -2600,6 +2710,11 @@ class ImageGeneratorApp {
                     <div class="image-alt" title="${img.alt || img.url}">${img.alt || '—'}</div>
                     ${loadingBadge}
                 </div>
+                <div class="image-prompt-area" id="img-prompt-area-${index}" style="display:none;">
+                    <label class="image-prompt-label" for="img-prompt-${index}">✏️ Instructions pour cette image</label>
+                    <textarea class="image-prompt-input" id="img-prompt-${index}" rows="2"
+                        placeholder="Ex: Remplacer le fond par un paysage urbain, garder le produit au centre..."></textarea>
+                </div>
             `;
 
             this.imagesGrid.appendChild(imageCard);
@@ -2626,8 +2741,20 @@ class ImageGeneratorApp {
             this.selectedImages = this.selectedImages.filter(i => i !== index);
         }
         
-        // Mettre à jour le compteur
+        // Afficher / masquer le prompt de cette image
+        const promptArea = document.getElementById(`img-prompt-area-${index}`);
+        if (promptArea) {
+            promptArea.style.display = isChecked ? 'block' : 'none';
+            if (isChecked) {
+                const textarea = document.getElementById(`img-prompt-${index}`);
+                if (textarea) setTimeout(() => textarea.focus(), 50);
+            }
+        }
+
+        // Mettre à jour les compteurs et l'état du bouton
         this.imagesSelectedCount.textContent = this.selectedImages.length;
+        if (this.modifyImagesCount) this.modifyImagesCount.textContent = this.selectedImages.length;
+        if (this.modifySelectedImagesBtn) this.modifySelectedImagesBtn.disabled = this.selectedImages.length === 0;
         
         console.log('✅ Images sélectionnées:', this.selectedImages);
     }
@@ -2639,17 +2766,26 @@ class ImageGeneratorApp {
             if (!this.selectedImages.includes(index)) {
                 this.selectedImages.push(index);
             }
+            const promptArea = document.getElementById(`img-prompt-area-${index}`);
+            if (promptArea) promptArea.style.display = 'block';
         });
         
         this.imagesSelectedCount.textContent = this.selectedImages.length;
+        if (this.modifyImagesCount) this.modifyImagesCount.textContent = this.selectedImages.length;
+        if (this.modifySelectedImagesBtn) this.modifySelectedImagesBtn.disabled = this.selectedImages.length === 0;
     }
     
     deselectAllImages() {
         document.querySelectorAll('.image-checkbox').forEach(checkbox => {
             checkbox.checked = false;
+            const index = parseInt(checkbox.dataset.index);
+            const promptArea = document.getElementById(`img-prompt-area-${index}`);
+            if (promptArea) promptArea.style.display = 'none';
         });
         this.selectedImages = [];
         this.imagesSelectedCount.textContent = 0;
+        if (this.modifyImagesCount) this.modifyImagesCount.textContent = 0;
+        if (this.modifySelectedImagesBtn) this.modifySelectedImagesBtn.disabled = true;
     }
     
     async handleModifySelectedImages() {
@@ -2658,14 +2794,17 @@ class ImageGeneratorApp {
             return;
         }
         
-        const modificationPrompt = this.imagesModificationPrompt.value.trim();
-        if (!modificationPrompt) {
-            this.showMessage('Veuillez décrire comment modifier les images', 'error');
-            return;
-        }
-        
-        if (!this.selectedStyle) {
-            this.showMessage('Veuillez d\'abord sélectionner un style visuel (Étape 2)', 'error');
+        // Vérifier que chaque image sélectionnée a un prompt renseigné
+        const missingPrompts = this.selectedImages.filter(index => {
+            const textarea = document.getElementById(`img-prompt-${index}`);
+            return !textarea || !textarea.value.trim();
+        });
+        if (missingPrompts.length > 0) {
+            this.showMessage(`⚠️ ${missingPrompts.length} image(s) n'ont pas d'instructions de modification`, 'error');
+            // Mettre en évidence le premier prompt manquant
+            const firstMissing = missingPrompts[0];
+            const textarea = document.getElementById(`img-prompt-${firstMissing}`);
+            if (textarea) textarea.focus();
             return;
         }
         
@@ -2677,13 +2816,15 @@ class ImageGeneratorApp {
             let successCount = 0;
             let failedCount = 0;
             
-            // Obtenir les données de style
-            const styleData = this.customStyleData || getStyleData(this.selectedStyle);
+            // Obtenir les données de style (peut être null pour le mode from-images)
+            const styleData = this.customStyleData || (this.selectedStyle ? getStyleData(this.selectedStyle) : null);
             
             // Traiter chaque image sélectionnée
             for (let i = 0; i < this.selectedImages.length; i++) {
                 const imageIndex = this.selectedImages[i];
                 const imageData = this.scannedImages[imageIndex];
+                // Lire le prompt individuel de cette image
+                const imagePrompt = document.getElementById(`img-prompt-${imageIndex}`)?.value.trim() || '';
                 
                 this.loadingMessage.textContent = `Modification de l'image ${i + 1}/${totalImages}...`;
                 
@@ -2698,7 +2839,7 @@ class ImageGeneratorApp {
                         },
                         body: JSON.stringify({
                             imageUrl: imageData.url,
-                            modificationPrompt: modificationPrompt,
+                            modificationPrompt: imagePrompt,
                             style: styleData
                         })
                     });
@@ -2721,9 +2862,9 @@ class ImageGeneratorApp {
                     const saveResult = await APIClient.saveImage(data.newImageUrl, {
                         style: 'dalle-edit',
                         subject: `Modified: ${imageData.alt || 'image'}`,
-                        prompt: modificationPrompt,
+                        prompt: imagePrompt,
                         originalImageUrl: imageData.url,
-                        modificationPrompt: modificationPrompt,
+                        modificationPrompt: imagePrompt,
                         model: 'dall-e-2',
                         size: '1024x1024',
                         quality: 'standard',
@@ -2737,7 +2878,7 @@ class ImageGeneratorApp {
                         filename: saveResult.filename,
                         style: 'dalle-edit',
                         subject: `Modified: ${imageData.alt || 'image'}`,
-                        prompt: modificationPrompt
+                        prompt: imagePrompt
                     });
                     
                     results.push({

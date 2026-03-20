@@ -78,7 +78,14 @@ async function generateOpenAI({ prompt, model, size, quality, apiKey }) {
 
     const d = await r.json();
     if (!r.ok) throw new Error(d.error?.message || `OpenAI error ${r.status}`);
-    return { imageUrl: d.data[0].url, revisedPrompt: d.data[0].revised_prompt };
+
+    // GPT-Image-1 retourne b64_json par défaut, DALL-E 3 retourne une URL
+    const item = d.data[0];
+    const imageUrl = item.url
+        || (item.b64_json ? `data:image/png;base64,${item.b64_json}` : null);
+
+    if (!imageUrl) throw new Error('Pas de données image dans la réponse OpenAI');
+    return { imageUrl, revisedPrompt: item.revised_prompt };
 }
 
 // ── Stability AI ─────────────────────────────────────────────

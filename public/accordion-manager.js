@@ -154,19 +154,24 @@ class AccordionManager {
             console.log(`✅ [ACCORDION] Step ${stepNumber} marked as completed`);
         }
         
-        // Ouvrir automatiquement l'étape suivante
+        // Ouvrir automatiquement l'étape suivante (Step 3 est vide → sauter à Step 4)
         if (stepNumber < this.totalSteps) {
-            const nextStep = stepNumber + 1;
+            let nextStep = stepNumber + 1;
+            // Sauter Step 3 (vide, contenu déplacé dans Step 1)
+            if (nextStep === 3) {
+                this.completedSteps.push(3);
+                const s3 = document.getElementById('globalStep3');
+                if (s3) { s3.classList.add('completed'); s3.style.display = 'none'; }
+                nextStep = 4;
+            }
             console.log(`⏰ [ACCORDION] Scheduling openStep(${nextStep}) in 300ms...`);
             setTimeout(() => {
-                // Rendre l'étape suivante visible si elle est cachée
                 if (typeof app !== 'undefined' && app.showStepWithAnimation) {
                     app.showStepWithAnimation(nextStep);
                 } else {
                     const el = document.getElementById(`globalStep${nextStep}`);
                     if (el) el.style.display = 'block';
                 }
-                console.log(`🚀 [ACCORDION] Now calling openStep(${nextStep})`);
                 this.openStep(nextStep);
             }, 300);
         } else {

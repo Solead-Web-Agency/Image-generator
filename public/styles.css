@@ -647,6 +647,44 @@ textarea {
     background: linear-gradient(135deg, rgba(0, 102, 255, 0.05) 0%, rgba(0, 229, 255, 0.05) 100%);
 }
 
+/* Mode sélectionné : griser les autres boutons */
+.mode-selector.has-selection .mode-btn:not(.active) {
+    opacity: 0.38;
+    pointer-events: none;
+    filter: grayscale(0.4);
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Séparateur + bouton Changer de mode */
+.mode-content-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.5rem 0 1rem;
+    padding-top: 1.5rem;
+    border-top: 1.5px dashed var(--border-color);
+}
+
+.change-mode-btn {
+    background: none;
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-gray);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.change-mode-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(0, 102, 255, 0.05);
+}
+
 .mode-icon {
     font-size: 2rem;
 }
@@ -1542,6 +1580,11 @@ textarea {
     transition: all 0.3s ease;
 }
 
+/* Masquer la flèche quand aucune étape suivante n'est visible */
+.accordion-step.step-isolated::after {
+    display: none;
+}
+
 .accordion-step.completed:not(:last-child)::after {
     content: '✓';
     color: var(--success-green);
@@ -1717,6 +1760,74 @@ textarea {
 
 .scan-tab-content.active {
     display: block;
+}
+
+/* Onglets from-images (mêmes styles que scan-tabs) */
+.fi-tab-btn {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--white);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+.fi-tab-btn:hover {
+    border-color: var(--primary-blue);
+    background: rgba(0, 102, 255, 0.02);
+}
+.fi-tab-btn.active {
+    border-color: var(--primary-blue);
+    background: var(--primary-blue);
+    color: var(--white);
+}
+.fi-tab-content {
+    display: none;
+}
+.fi-tab-content.active {
+    display: block;
+}
+
+/* Zone de prompt par image dans les cartes */
+.image-prompt-area {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0, 102, 255, 0.04);
+    border: 1.5px solid rgba(0, 102, 255, 0.2);
+    border-radius: 8px;
+    animation: slideDown 0.2s ease;
+}
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.image-prompt-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    margin-bottom: 0.4rem;
+}
+.image-prompt-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1.5px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.83rem;
+    resize: vertical;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+.image-prompt-input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
 }
 
 .mode-content .form-group label {
@@ -2201,6 +2312,16 @@ textarea {
 }
 
 /* CSV Instructions */
+.csv-template-link {
+    color: var(--primary-blue);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.csv-template-link:hover {
+    text-decoration: underline;
+}
+
 .csv-instructions {
     background: var(--light-bg);
     padding: 1.5rem;

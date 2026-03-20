@@ -81,7 +81,7 @@
 
         <main>
             <!-- STEP 1: Mode de travail -->
-            <div class="accordion-step active" id="globalStep1">
+            <div class="accordion-step active step-isolated" id="globalStep1">
                 <div class="step-header" data-step="1">
                     <div class="step-number">1</div>
                     <div class="step-info">
@@ -92,27 +92,254 @@
                 </div>
                 
                 <div class="step-content">
-                    <div class="mode-selector">
+                    <div class="mode-selector" id="modeSelector">
                         <button class="mode-btn" data-mode="manual">
                             <span class="mode-icon">✏️</span>
-                            <span class="mode-title">Création manuelle</span>
-                            <span class="mode-desc">Créez une image unique</span>
+                            <span class="mode-title">Création Manuelle</span>
+                            <span class="mode-desc">Créer une seule image à partir d'un prompt IA</span>
                         </button>
                         <button class="mode-btn" data-mode="scan">
                             <span class="mode-icon">🔍</span>
                             <span class="mode-title">Scanner une page</span>
-                            <span class="mode-desc">Analysez une page et générez plusieurs images</span>
+                            <span class="mode-desc">Analyser une page web et générer tous les visuels correspondants aux blocs images présents</span>
                         </button>
                         <button class="mode-btn" data-mode="csv">
                             <span class="mode-icon">📊</span>
                             <span class="mode-title">Import CSV</span>
-                            <span class="mode-desc">Générez des images depuis un fichier CSV</span>
+                            <span class="mode-desc">Générer toutes les images mentionnées dans un fichier .csv</span>
                         </button>
                         <button class="mode-btn" data-mode="from-images">
                             <span class="mode-icon">🖼️</span>
-                            <span class="mode-title">À partir d'images existantes</span>
-                            <span class="mode-desc">Récupérez et modifiez des images d'une page</span>
+                            <span class="mode-title">Images Existantes</span>
+                            <span class="mode-desc">Récupérer et retravailler les images d'une page existante</span>
                         </button>
+                    </div>
+
+                    <!-- Panneau de contenu du mode sélectionné (affiché inline dans le bloc 1) -->
+                    <div id="modeContentContainer" style="display:none;">
+                        <div class="mode-content-divider">
+                            <button id="changeModeBtn" class="change-mode-btn">Changer de mode</button>
+                        </div>
+
+                        <!-- Contenu mode Manuel -->
+                        <div id="manualContent" class="mode-content" style="display: none;">
+                            <section class="section">
+                                <div class="section-header" style="margin-bottom: 2rem;">
+                                    <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">📝 Décrivez votre image</h3>
+                                    <p style="margin: 0; color: var(--text-gray);">L'IA va adapter le style choisi à votre sujet</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="subjectInput">Sujet de l'image</label>
+                                    <input type="text" id="subjectInput" placeholder="Ex: Un bureau moderne avec laptop, écran affichant des graphiques..." />
+                                    <p class="help-text">💡 Plus vous êtes précis, meilleur sera le résultat</p>
+                                </div>
+                                <button id="generatePromptBtn" class="btn-primary btn-large">
+                                    <span class="btn-icon">✨</span>
+                                    Générer le prompt optimisé
+                                </button>
+
+                                <!-- Aperçu du prompt généré -->
+                                <div id="manualPromptPreview" style="display:none; margin-top:1.5rem;">
+                                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem;">
+                                        <label style="font-weight:600; color:var(--text-dark); font-size:0.9rem;">✨ Prompt optimisé</label>
+                                        <button id="editPromptInlineBtn" class="btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.8rem;">✏️ Modifier</button>
+                                    </div>
+                                    <div id="manualPromptText" class="prompt-display" style="font-size:0.88rem; padding:1rem; background:var(--bg-light); border:1.5px solid var(--border-color); border-radius:10px; color:var(--text-dark); line-height:1.6; white-space:pre-wrap;"></div>
+                                    <textarea id="manualPromptEdit" style="display:none; width:100%; min-height:100px; margin-top:0.5rem; padding:1rem; border:1.5px solid var(--primary); border-radius:10px; font-size:0.88rem; resize:vertical;"></textarea>
+                                </div>
+                            </section>
+                        </div>
+
+                        <!-- Contenu mode Scanner -->
+                        <div id="scanContent" class="mode-content" style="display: none;">
+                            <section class="section">
+                                <div class="section-header" style="margin-bottom: 2rem;">
+                                    <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">🔍 Analysez une page web</h3>
+                                    <p style="margin: 0; color: var(--text-gray);">L'IA détectera les sections et suggérera des images pertinentes</p>
+                                </div>
+                                <div class="scan-tabs">
+                                    <button class="scan-tab-btn active" data-tab="url">
+                                        <span>🔗</span>
+                                        <span>Depuis URL</span>
+                                    </button>
+                                    <button class="scan-tab-btn" data-tab="html">
+                                        <span>📄</span>
+                                        <span>Depuis HTML</span>
+                                    </button>
+                                </div>
+                                <div class="scan-tab-content active" id="urlTab">
+                                    <div class="form-group">
+                                        <label for="urlInput">URL de la page à scanner</label>
+                                        <input type="url" id="urlInput" placeholder="https://exemple.com/page" />
+                                        <p class="help-text">⚠️ Peut ne pas fonctionner à cause des restrictions CORS</p>
+                                    </div>
+                                    <button id="scanUrlBtn" class="btn-primary btn-large">
+                                        <span class="btn-icon">🔍</span>
+                                        Scanner l'URL
+                                    </button>
+                                </div>
+                                <div class="scan-tab-content" id="htmlTab">
+                                    <div class="form-group">
+                                        <label for="htmlInput">Code HTML de la page</label>
+                                        <textarea id="htmlInput" rows="10" placeholder="Collez votre HTML ici..."></textarea>
+                                        <p class="help-text">💡 Faites clic droit → "Afficher le code source" sur la page à analyser</p>
+                                    </div>
+                                    <button id="scanHtmlBtn" class="btn-primary btn-large">
+                                        <span class="btn-icon">🔍</span>
+                                        Scanner le HTML
+                                    </button>
+                                </div>
+                                <div id="scanResults" style="display: none; margin-top: 2rem;">
+                                    <div class="result-header" style="margin-bottom: 1.5rem;">
+                                        <h3 style="margin: 0 0 0.5rem 0;">📋 Sections détectées sur la page</h3>
+                                        <p style="margin: 0; color: var(--text-gray); font-size: 0.95rem;">Cochez les sections pour lesquelles vous souhaitez générer des images</p>
+                                        <div class="sections-stats" style="margin-top: 1rem; display: flex; gap: 1rem;">
+                                            <span class="stat-badge" id="sectionsTotal">0 sections trouvées</span>
+                                            <span class="stat-badge" id="sectionsSelected">0 sélectionnées</span>
+                                        </div>
+                                    </div>
+                                    <div class="sections-grid" id="sectionsGrid"></div>
+                                    <div class="actions-bar" style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center;">
+                                        <button id="selectAllSectionsBtn" class="btn-secondary"><span class="btn-icon">☑️</span>Tout sélectionner</button>
+                                        <button id="deselectAllSectionsBtn" class="btn-secondary"><span class="btn-icon">⬜</span>Tout désélectionner</button>
+                                        <button id="analyzeSelectedBtn" class="btn-primary btn-large" style="margin-left: auto;" disabled>
+                                            <span class="btn-icon">🤖</span>
+                                            Analyser les sections sélectionnées (<span id="analyzeCount">0</span>)
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="imageSuggestions" style="display: none; margin-top: 2rem;">
+                                    <div class="result-header" style="margin-bottom: 1.5rem;">
+                                        <h3 style="margin: 0 0 0.5rem 0;">✨ Sujets d'images suggérés par l'IA</h3>
+                                        <p style="margin: 0; color: var(--text-gray); font-size: 0.95rem;">L'IA a analysé vos sections et proposé des sujets d'images pertinents</p>
+                                    </div>
+                                    <div id="suggestionsContainer"></div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <!-- Contenu mode CSV -->
+                        <div id="csvContent" class="mode-content" style="display: none;">
+                            <section class="section">
+                                <div class="section-header" style="margin-bottom: 2rem;">
+                                    <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">📊 Import CSV pour génération en batch</h3>
+                                    <p style="margin: 0; color: var(--text-gray);">Générez des centaines d'images à partir d'un fichier CSV — <a href="modele-import-images.csv" download class="csv-template-link">⬇️ Télécharger le modèle .csv</a></p>
+                                </div>
+                                <div class="csv-instructions">
+                                    <h4 style="color: var(--primary-blue); margin-bottom: 1rem;">📋 Format requis</h4>
+                                    <ul>
+                                        <li>Au moins une colonne avec "img" dans le nom (ex: <code>img_produit</code>, <code>image</code>, <code>img1</code>)</li>
+                                        <li>Les colonnes <strong>avant</strong> la colonne image = contexte pour l'IA</li>
+                                    </ul>
+                                    <details>
+                                        <summary>💡 Exemple de CSV</summary>
+                                        <pre class="csv-example">Produit,Description,img_produit,Catégorie,Prix
+Nike Air Max,Chaussures de sport noires et blanches,[à générer],Sport,120€
+MacBook Pro,Ordinateur portable 16 pouces,[à générer],Tech,2500€</pre>
+                                    </details>
+                                </div>
+                                <div class="csv-upload">
+                                    <label for="csvFileInput" class="csv-upload-label">
+                                        <span class="csv-upload-icon">📁</span>
+                                        <span>Cliquez pour sélectionner un fichier CSV</span>
+                                        <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                                    </label>
+                                    <p class="help-text">ou collez votre CSV ci-dessous</p>
+                                    <textarea id="csvTextInput" placeholder="Collez votre CSV ici..." rows="8"></textarea>
+                                    <button id="parseCSVBtn" class="btn-primary">
+                                        <span class="btn-icon">📊</span>
+                                        Analyser le CSV
+                                    </button>
+                                </div>
+                                <div id="csvPreview" style="display: none; margin-top: 2rem;">
+                                    <h3>Aperçu du CSV</h3>
+                                    <div class="csv-stats">
+                                        <span class="csv-stat"><strong id="csvRowCount">0</strong> lignes</span>
+                                        <span class="csv-stat"><strong id="csvColCount">0</strong> colonnes</span>
+                                        <span class="csv-stat"><strong id="csvImgCount">0</strong> image(s) à générer</span>
+                                    </div>
+                                    <div class="csv-table-wrapper"><table id="csvTable" class="csv-table"></table></div>
+                                    <button id="analyzeCSVBtn" class="btn-primary" style="margin-top: 1rem;">
+                                        <span class="btn-icon">🤖</span>
+                                        Analyser avec l'IA
+                                    </button>
+                                </div>
+                                <div id="csvImageTasks" style="display: none; margin-top: 2rem;">
+                                    <h3>Sujets générés par l'IA</h3>
+                                    <div id="csvTasksContainer"></div>
+                                </div>
+                            </section>
+                        </div>
+
+                        <!-- Contenu mode À partir d'images existantes -->
+                        <div id="fromImagesContent" class="mode-content" style="display: none;">
+                            <section class="section">
+                                <div class="section-header" style="margin-bottom: 2rem;">
+                                    <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">🖼️ Récupérer et modifier des images</h3>
+                                    <p style="margin: 0; color: var(--text-gray);">Importez vos images via URL ou upload, puis définissez un prompt par image</p>
+                                </div>
+
+                                <!-- Onglets URL / Upload -->
+                                <div class="scan-tabs">
+                                    <button class="fi-tab-btn active" data-fi-tab="fromImagesUrl">
+                                        <span>🔗</span>
+                                        <span>Depuis URL</span>
+                                    </button>
+                                    <button class="fi-tab-btn" data-fi-tab="fromImagesUpload">
+                                        <span>📁</span>
+                                        <span>Upload une image</span>
+                                    </button>
+                                </div>
+
+                                <!-- Onglet URL -->
+                                <div class="fi-tab-content active" id="fromImagesUrlTab">
+                                    <div class="form-group">
+                                        <label for="imagesScanUrl">URL de la page à scanner</label>
+                                        <input type="url" id="imagesScanUrl" placeholder="https://exemple.com/page" />
+                                        <p class="help-text">💡 L'IA va récupérer toutes les images de la page</p>
+                                    </div>
+                                    <button id="scanPageImagesBtn" class="btn-primary btn-large">
+                                        <span class="btn-icon">🔍</span>
+                                        Scanner les images de la page
+                                    </button>
+                                </div>
+
+                                <!-- Onglet Upload -->
+                                <div class="fi-tab-content" id="fromImagesUploadTab">
+                                    <div class="form-group">
+                                        <label>Image à modifier</label>
+                                        <label for="fromImagesUploadInput" class="csv-upload-label" id="fromImagesUploadZone">
+                                            <span class="csv-upload-icon">📤</span>
+                                            <span id="fromImagesUploadLabel">Cliquez pour sélectionner une image</span>
+                                            <input type="file" id="fromImagesUploadInput" accept="image/*" style="display: none;">
+                                        </label>
+                                        <p class="help-text">💡 Formats supportés : JPG, PNG, WebP, GIF</p>
+                                    </div>
+                                </div>
+
+                                <!-- Résultats (commun aux deux onglets) -->
+                                <div id="scannedImagesResults" style="display: none; margin-top: 2rem;">
+                                    <div class="section-header" style="margin-bottom: 1.5rem;">
+                                        <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">
+                                            <span id="imagesFoundCount">0</span> image(s) trouvée(s)
+                                        </h3>
+                                        <p style="margin: 0; color: var(--text-gray);">
+                                            <span id="imagesSelectedCount">0</span> sélectionnée(s) •
+                                            <button class="btn-link" onclick="app.selectAllImages()">Tout sélectionner</button> •
+                                            <button class="btn-link" onclick="app.deselectAllImages()">Tout désélectionner</button>
+                                        </p>
+                                    </div>
+                                    <p class="help-text" style="margin-bottom: 1rem;">💡 Cochez une image pour afficher son champ de prompt</p>
+                                    <div id="imagesGrid" class="images-grid"></div>
+                                    <div style="margin-top: 1.5rem; text-align: right;">
+                                        <button id="modifySelectedImagesBtn" class="btn-primary btn-large" disabled>
+                                            <span class="btn-icon">🎨</span>
+                                            Modifier les images sélectionnées (<span id="modifyImagesCount">0</span>)
+                                        </button>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -337,264 +564,19 @@
                 </div>
             </div>
 
-            <!-- STEP 3: Contenu (variable selon le mode) -->
+            <!-- STEP 3: vide - contenu déplacé dans Step 1 -->
             <div class="accordion-step" id="globalStep3" style="display: none;">
                 <div class="step-header" data-step="3">
                     <div class="step-number">3</div>
-                    <div class="step-info">
-                        <h2 id="step3Title">Contenu</h2>
-                        <p class="step-desc" id="step3Desc">Préparez votre contenu</p>
-                    </div>
-                    <div class="step-icon" id="step3Icon">📝</div>
+                    <div class="step-info"><h2>Contenu</h2></div>
                 </div>
-                
-                <div class="step-content">
-                    <!-- Contenu mode Manuel -->
-                    <div id="manualContent" class="mode-content" style="display: none;">
-                        <section class="section">
-                            <div class="section-header" style="margin-bottom: 2rem;">
-                                <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">📝 Décrivez votre image</h3>
-                                <p style="margin: 0; color: var(--text-gray);">L'IA va adapter le style choisi à votre sujet</p>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="subjectInput">Sujet de l'image</label>
-                                <input type="text" id="subjectInput" placeholder="Ex: Un bureau moderne avec laptop, écran affichant des graphiques..." />
-                                <p class="help-text">💡 Plus vous êtes précis, meilleur sera le résultat</p>
-                            </div>
-                            
-                            <button id="generatePromptBtn" class="btn-primary btn-large">
-                                <span class="btn-icon">✨</span>
-                                Générer le prompt optimisé
-                            </button>
-                        </section>
-                    </div>
-
-                    <!-- Contenu mode Scanner -->
-                    <div id="scanContent" class="mode-content" style="display: none;">
-                        <section class="section">
-                            <div class="section-header" style="margin-bottom: 2rem;">
-                                <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">🔍 Analysez une page web</h3>
-                                <p style="margin: 0; color: var(--text-gray);">L'IA détectera les sections et suggérera des images pertinentes</p>
-                            </div>
-                            
-                            <div class="scan-tabs">
-                                <button class="scan-tab-btn active" data-tab="url">
-                                    <span>🔗</span>
-                                    <span>Depuis URL</span>
-                                </button>
-                                <button class="scan-tab-btn" data-tab="html">
-                                    <span>📄</span>
-                                    <span>Depuis HTML</span>
-                                </button>
-                            </div>
-                            
-                            <div class="scan-tab-content active" id="urlTab">
-                                <div class="form-group">
-                                    <label for="urlInput">URL de la page à scanner</label>
-                                    <input type="url" id="urlInput" placeholder="https://exemple.com/page" />
-                                    <p class="help-text">⚠️ Peut ne pas fonctionner à cause des restrictions CORS</p>
-                                </div>
-                                <button id="scanUrlBtn" class="btn-primary btn-large">
-                                    <span class="btn-icon">🔍</span>
-                                    Scanner l'URL
-                                </button>
-                            </div>
-                            
-                            <div class="scan-tab-content" id="htmlTab">
-                                <div class="form-group">
-                                    <label for="htmlInput">Code HTML de la page</label>
-                                    <textarea id="htmlInput" rows="10" placeholder="Collez votre HTML ici..."></textarea>
-                                    <p class="help-text">💡 Faites clic droit → "Afficher le code source" sur la page à analyser</p>
-                                </div>
-                                <button id="scanHtmlBtn" class="btn-primary btn-large">
-                                    <span class="btn-icon">🔍</span>
-                                    Scanner le HTML
-                                </button>
-                            </div>
-                        
-                            <!-- Sections détectées après scan -->
-                            <div id="scanResults" style="display: none; margin-top: 2rem;">
-                                <div class="result-header" style="margin-bottom: 1.5rem;">
-                                    <h3 style="margin: 0 0 0.5rem 0;">📋 Sections détectées sur la page</h3>
-                                    <p style="margin: 0; color: var(--text-gray); font-size: 0.95rem;">
-                                        Cochez les sections pour lesquelles vous souhaitez générer des images
-                                    </p>
-                                    <div class="sections-stats" style="margin-top: 1rem; display: flex; gap: 1rem;">
-                                        <span class="stat-badge" id="sectionsTotal">0 sections trouvées</span>
-                                        <span class="stat-badge" id="sectionsSelected">0 sélectionnées</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="sections-grid" id="sectionsGrid">
-                                    <!-- Les sections seront affichées ici -->
-                                </div>
-                                
-                                <div class="actions-bar" style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center;">
-                                    <button id="selectAllSectionsBtn" class="btn-secondary">
-                                        <span class="btn-icon">☑️</span>
-                                        Tout sélectionner
-                                    </button>
-                                    <button id="deselectAllSectionsBtn" class="btn-secondary">
-                                        <span class="btn-icon">⬜</span>
-                                        Tout désélectionner
-                                    </button>
-                                    <button id="analyzeSelectedBtn" class="btn-primary btn-large" style="margin-left: auto;" disabled>
-                                        <span class="btn-icon">🤖</span>
-                                        Analyser les sections sélectionnées (<span id="analyzeCount">0</span>)
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <!-- Suggestions d'images après analyse -->
-                            <div id="imageSuggestions" style="display: none; margin-top: 2rem;">
-                                <div class="result-header" style="margin-bottom: 1.5rem;">
-                                    <h3 style="margin: 0 0 0.5rem 0;">✨ Sujets d'images suggérés par l'IA</h3>
-                                    <p style="margin: 0; color: var(--text-gray); font-size: 0.95rem;">
-                                        L'IA a analysé vos sections et proposé des sujets d'images pertinents
-                                    </p>
-                                </div>
-                                <div id="suggestionsContainer"></div>
-                                <div style="margin-top: 1.5rem;">
-                                    <button id="generateAllBtn" class="btn-primary btn-large">
-                                        <span class="btn-icon">🎨</span>
-                                        Générer toutes les images cochées
-                                    </button>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
-
-                    <!-- Contenu mode CSV -->
-                    <div id="csvContent" class="mode-content" style="display: none;">
-                        <section class="section">
-                            <div class="section-header" style="margin-bottom: 2rem;">
-                                <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">📊 Import CSV pour génération en batch</h3>
-                                <p style="margin: 0; color: var(--text-gray);">Générez des centaines d'images à partir d'un fichier CSV</p>
-                            </div>
-                            
-                            <!-- Import CSV -->
-                            <div class="csv-instructions">
-                                <h4 style="color: var(--primary-blue); margin-bottom: 1rem;">📋 Format requis</h4>
-                            <ul>
-                                <li>Au moins une colonne avec "img" dans le nom (ex: <code>img_produit</code>, <code>image</code>, <code>img1</code>)</li>
-                                <li>Les colonnes <strong>avant</strong> la colonne image = contexte pour l'IA</li>
-                            </ul>
-                            
-                            <details>
-                                <summary>💡 Exemple de CSV</summary>
-                                <pre class="csv-example">Produit,Description,img_produit,Catégorie,Prix
-Nike Air Max,Chaussures de sport noires et blanches,[à générer],Sport,120€
-MacBook Pro,Ordinateur portable 16 pouces,[à générer],Tech,2500€</pre>
-                            </details>
-                        </div>
-
-                        <div class="csv-upload">
-                            <label for="csvFileInput" class="csv-upload-label">
-                                <span class="csv-upload-icon">📁</span>
-                                <span>Cliquez pour sélectionner un fichier CSV</span>
-                                <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
-                            </label>
-                            <p class="help-text">ou collez votre CSV ci-dessous</p>
-                            <textarea id="csvTextInput" placeholder="Collez votre CSV ici..." rows="8"></textarea>
-                            <button id="parseCSVBtn" class="btn-primary">
-                                <span class="btn-icon">📊</span>
-                                Analyser le CSV
-                            </button>
-                        </div>
-                        
-                        <!-- Aperçu CSV -->
-                        <div id="csvPreview" style="display: none; margin-top: 2rem;">
-                            <h3>Aperçu du CSV</h3>
-                            <div class="csv-stats">
-                                <span class="csv-stat"><strong id="csvRowCount">0</strong> lignes</span>
-                                <span class="csv-stat"><strong id="csvColCount">0</strong> colonnes</span>
-                                <span class="csv-stat"><strong id="csvImgCount">0</strong> image(s) à générer</span>
-                            </div>
-                            <div class="csv-table-wrapper">
-                                <table id="csvTable" class="csv-table"></table>
-                            </div>
-                            <button id="analyzeCSVBtn" class="btn-primary" style="margin-top: 1rem;">
-                                <span class="btn-icon">🤖</span>
-                                Analyser avec l'IA
-                            </button>
-                        </div>
-                        
-                        <!-- Sujets générés -->
-                        <div id="csvImageTasks" style="display: none; margin-top: 2rem;">
-                            <h3>Sujets générés par l'IA</h3>
-                            <div id="csvTasksContainer"></div>
-                            <button id="generateCSVImagesBtn" class="btn-primary" style="margin-top: 1.5rem;">
-                                <span class="btn-icon">🎨</span>
-                                Générer toutes les images
-                            </button>
-                        </div>
-                        </section>
-                    </div>
-
-                    <!-- Contenu mode À partir d'images existantes -->
-                    <div id="fromImagesContent" class="mode-content" style="display: none;">
-                        <section class="section">
-                            <div class="section-header" style="margin-bottom: 2rem;">
-                                <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">🖼️ Récupérer et modifier des images</h3>
-                                <p style="margin: 0; color: var(--text-gray);">Scannez une page pour extraire les images et les modifier avec l'IA</p>
-                            </div>
-                            
-                            <!-- Scanner d'images -->
-                            <div class="form-group">
-                                <label for="imagesScanUrl">URL de la page à scanner</label>
-                                <input type="url" id="imagesScanUrl" placeholder="https://exemple.com/page" />
-                                <p class="help-text">💡 L'IA va récupérer toutes les images de la page</p>
-                            </div>
-                            
-                            <button id="scanPageImagesBtn" class="btn-primary btn-large">
-                                <span class="btn-icon">🔍</span>
-                                Scanner les images de la page
-                            </button>
-                            
-                            <!-- Résultats du scan d'images -->
-                            <div id="scannedImagesResults" style="display: none; margin-top: 2rem;">
-                                <div class="section-header" style="margin-bottom: 1.5rem;">
-                                    <h3 style="margin: 0 0 0.5rem 0; color: var(--text-dark);">
-                                        <span id="imagesFoundCount">0</span> image(s) trouvée(s)
-                                    </h3>
-                                    <p style="margin: 0; color: var(--text-gray);">
-                                        <span id="imagesSelectedCount">0</span> sélectionnée(s) • 
-                                        <button class="btn-link" onclick="app.selectAllImages()">Tout sélectionner</button> • 
-                                        <button class="btn-link" onclick="app.deselectAllImages()">Tout désélectionner</button>
-                                    </p>
-                                </div>
-                                
-                                <!-- Grille d'images -->
-                                <div id="imagesGrid" class="images-grid"></div>
-                                
-                                <!-- Instructions de modification -->
-                                <div style="margin-top: 2rem; padding: 1.5rem; background: var(--light-bg); border-radius: 8px;">
-                                    <h4 style="margin: 0 0 1rem 0; color: var(--text-dark);">
-                                        ✨ Comment voulez-vous modifier les images sélectionnées ?
-                                    </h4>
-                                    <div class="form-group">
-                                        <label for="imagesModificationPrompt">Instructions de modification</label>
-                                        <textarea id="imagesModificationPrompt" rows="3" 
-                                            placeholder="Ex: Rendre l'image plus lumineuse et ajouter un filtre vintage..."></textarea>
-                                        <p class="help-text">💡 L'IA va modifier chaque image selon ces instructions tout en gardant le style choisi</p>
-                                    </div>
-                                    
-                                    <button id="modifySelectedImagesBtn" class="btn-primary btn-large">
-                                        <span class="btn-icon">🎨</span>
-                                        Modifier les images sélectionnées
-                                    </button>
-                                </div>
-                            </div>
-                        </section>
-                    </div>
-                </div>
+                <div class="step-content"></div>
             </div>
 
             <!-- STEP 4: Prompt et génération -->
             <div class="accordion-step" id="globalStep4" style="display: none;">
                 <div class="step-header" data-step="4">
-                    <div class="step-number">4</div>
+                    <div class="step-number">3</div>
                     <div class="step-info">
                         <h2>Génération</h2>
                         <p class="step-desc">Configurez et lancez la génération</p>
@@ -630,17 +612,39 @@ MacBook Pro,Ordinateur portable 16 pouces,[à générer],Tech,2500€</pre>
                     <select id="sizeSelect" style="display:none;"><option value="1024x1024">1024x1024</option><option value="1792x1024">1792x1024</option><option value="1024x1792">1024x1792</option></select>
                     <select id="qualitySelect" style="display:none;"><option value="standard">Standard</option><option value="hd">HD</option></select>
 
-                    <button id="generateImageBtn" class="btn-primary btn-large">
-                        <span class="btn-icon">🎨</span>
-                        Générer l'image
-                    </button>
+                    <!-- Mode manuel : bouton générer -->
+                    <div id="step4Manual" style="display:none;">
+                        <button id="generateImageBtn" class="btn-primary btn-large">
+                            <span class="btn-icon">🎨</span>
+                            Générer l'image
+                        </button>
+                    </div>
+
+                    <!-- Mode scan : bouton générer toutes les images -->
+                    <div id="step4Scan" style="display:none;">
+                        <p style="color:var(--text-gray); margin-bottom:1rem;">Les sujets d'images ont été analysés. Lancez la génération avec le style choisi.</p>
+                        <button id="generateAllBtn" class="btn-primary btn-large">
+                            <span class="btn-icon">🖼️</span>
+                            Générer toutes les images
+                        </button>
+                    </div>
+
+                    <!-- Mode CSV : bouton générer toutes les images -->
+                    <div id="step4CSV" style="display:none;">
+                        <p style="color:var(--text-gray); margin-bottom:1rem;">Les sujets ont été générés par l'IA. Lancez la génération avec le style choisi.</p>
+                        <p id="step4CSVCount" style="font-weight:600; color:var(--primary); margin-bottom:1.5rem;"></p>
+                        <button id="generateCSVImagesBtn" class="btn-primary btn-large">
+                            <span class="btn-icon">🎨</span>
+                            Générer toutes les images CSV
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <!-- STEP 5: Résultats -->
             <div class="accordion-step" id="globalStep5" style="display: none;">
                 <div class="step-header" data-step="5">
-                    <div class="step-number">5</div>
+                    <div class="step-number">4</div>
                     <div class="step-info">
                         <h2>Résultat</h2>
                         <p class="step-desc">Image générée avec succès</p>
