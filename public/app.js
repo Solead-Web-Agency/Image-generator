@@ -849,31 +849,6 @@ class ImageGeneratorApp {
         const contentMap = { manual: this.manualContent, scan: this.scanContent, csv: this.csvContent, 'from-images': this.fromImagesContent };
         if (contentMap[mode]) contentMap[mode].style.display = 'block';
 
-        // Bouton "Changer de mode" : réinitialise tout
-        const changeBtn = document.getElementById('changeModeBtn');
-        if (changeBtn) {
-            changeBtn.onclick = () => {
-                selectedBtn.classList.remove('active');
-                document.getElementById('modeSelector')?.classList.remove('has-selection');
-                if (modeContainer) modeContainer.style.display = 'none';
-                this.currentMode = null;
-                // Réinitialiser le preview du prompt manuel
-                const p = document.getElementById('manualPromptPreview');
-                if (p) p.style.display = 'none';
-                this.generatedPrompt = null;
-                [2, 3, 4, 5].forEach(n => {
-                    const s = document.getElementById(`globalStep${n}`);
-                    if (s) { s.style.display = 'none'; s.classList.remove('active', 'completed'); }
-                });
-                const s1 = document.getElementById('globalStep1');
-                if (s1) {
-                    s1.classList.remove('completed');
-                    s1.classList.add('active');
-                    s1.classList.add('step-isolated'); // masque la flèche ↓
-                }
-                accordionManager.completedSteps = accordionManager.completedSteps.filter(s => s !== 1);
-            };
-        }
 
         if (mode === 'from-images') {
             // Pas de style → masquer Step 2, l'utilisateur reste dans Step 1

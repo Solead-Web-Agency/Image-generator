@@ -647,22 +647,15 @@ textarea {
     background: linear-gradient(135deg, rgba(0, 102, 255, 0.05) 0%, rgba(0, 229, 255, 0.05) 100%);
 }
 
-/* Mode sélectionné : griser les autres boutons */
+/* Mode sélectionné : atténuer légèrement les autres boutons, mais les garder cliquables */
 .mode-selector.has-selection .mode-btn:not(.active) {
-    opacity: 0.38;
-    pointer-events: none;
-    filter: grayscale(0.4);
-    transform: none !important;
-    box-shadow: none !important;
+    opacity: 0.6;
+    filter: grayscale(0.2);
 }
 
-/* Séparateur + bouton Changer de mode */
+/* Séparateur entre les boutons de mode et le contenu */
 .mode-content-divider {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin: 1.5rem 0 1rem;
-    padding-top: 1.5rem;
+    margin: 1.5rem 0 0;
     border-top: 1.5px dashed var(--border-color);
 }
 
