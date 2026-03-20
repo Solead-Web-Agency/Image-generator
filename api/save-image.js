@@ -3,6 +3,11 @@ const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
 
+// En environnement serverless (Vercel), le filesystem est en lecture seule.
+// On ne peut écrire que dans /tmp, mais ces fichiers ne sont pas accessibles via HTTP.
+// On détecte cet environnement et on retourne l'URL directement sans écriture disque.
+const IS_SERVERLESS = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.FUNCTION_NAME);
+
 module.exports = async (req, res) => {
     // CORS headers
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -26,35 +31,44 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: 'URL de l\'image requise' });
         }
 
-        // Créer le nom de fichier
+        // Construire le nom de fichier (utile dans les deux cas)
         const now = new Date();
         const dateFolder = now.toISOString().split('T')[0];
         const timestamp = now.getTime();
         const styleName = metadata?.style || 'unknown';
         const subject = metadata?.subject || 'image';
-        
-        // Nettoyer le nom du style (pour éviter les caractères invalides dans le nom de fichier)
+
         const cleanStyle = styleName
             .substring(0, 30)
             .replace(/[^a-z0-9-_]/gi, '-')
             .replace(/-+/g, '-')
             .toLowerCase();
-        
+
         const cleanSubject = subject
             .substring(0, 50)
             .replace(/[^a-z0-9-_]/gi, '-')
             .replace(/-+/g, '-')
             .toLowerCase();
-        
-        const filename = `${timestamp}-${cleanStyle}-${cleanSubject}.png`;
-        const relativePath = `${dateFolder}/${filename}`;
 
-        // Télécharger l'image (HTTP ou data URL base64)
+        const filename = `${timestamp}-${cleanStyle}-${cleanSubject}.png`;
+
+        // ── Mode serverless (Vercel) ──────────────────────────────────────────
+        // Pas d'accès disque persistant : on retourne l'URL directement.
+        if (IS_SERVERLESS) {
+            console.log('☁️  Mode serverless détecté — pas d\'écriture disque, retour de l\'URL directe');
+            return res.status(200).json({
+                success: true,
+                path: imageUrl,   // L'URL OpenAI ou le base64 sert de "path"
+                filename,
+                serverless: true
+            });
+        }
+
+        // ── Mode local (Node.js classique) ───────────────────────────────────
         console.log('📥 Téléchargement de l\'image...');
         let imageBuffer;
 
         if (imageUrl.startsWith('data:')) {
-            // Data URL base64 → buffer directement (GPT-Image-1 retourne du base64)
             const base64Data = imageUrl.split(',')[1];
             if (!base64Data) throw new Error('Data URL invalide');
             imageBuffer = Buffer.from(base64Data, 'base64');
@@ -62,26 +76,23 @@ module.exports = async (req, res) => {
         } else {
             const imageResponse = await fetch(imageUrl);
             if (!imageResponse.ok) {
-                throw new Error(`Impossible de télécharger l\'image: ${imageResponse.status}`);
+                throw new Error(`Impossible de télécharger l'image: ${imageResponse.status}`);
             }
             imageBuffer = await imageResponse.buffer();
         }
 
-        // Créer le dossier si nécessaire
+        const relativePath = `${dateFolder}/${filename}`;
         const publicDir = path.join(process.cwd(), 'public', 'generated-images', dateFolder);
         if (!fs.existsSync(publicDir)) {
             fs.mkdirSync(publicDir, { recursive: true });
         }
 
-        // Sauvegarder l'image
         const fullPath = path.join(publicDir, filename);
         fs.writeFileSync(fullPath, imageBuffer);
-
         console.log('✅ Image sauvegardée:', relativePath);
 
-        // Sauvegarder les métadonnées
-        const metadataPath = path.join(publicDir, `${timestamp}-metadata.json`);
-        fs.writeFileSync(metadataPath, JSON.stringify({
+        const metadataFilePath = path.join(publicDir, `${timestamp}-metadata.json`);
+        fs.writeFileSync(metadataFilePath, JSON.stringify({
             filename,
             ...metadata,
             savedAt: now.toISOString(),
