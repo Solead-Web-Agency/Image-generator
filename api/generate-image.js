@@ -51,6 +51,16 @@ module.exports = async (req, res) => {
 
     } catch (error) {
         console.error('💥 Erreur génération:', error.message);
+
+        // Détecter les refus de sécurité pour donner un message actionnable
+        const isSafety = /safety|content.policy|rejected|violat/i.test(error.message);
+        if (isSafety) {
+            return res.status(400).json({
+                error: error.message,
+                errorType: 'safety'
+            });
+        }
+
         return res.status(500).json({ error: error.message });
     }
 };

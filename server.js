@@ -23,6 +23,7 @@ app.post('/api/search-library-images', require('./api/search-library-images'));
 app.post('/api/analyze-library-style', require('./api/analyze-library-style'));
 app.post('/api/extract-page-images', require('./api/extract-page-images'));
 app.post('/api/analyze-and-modify-image', require('./api/analyze-and-modify-image'));
+app.post('/api/generate-prompt', require('./api/generate-prompt'));
 
 // Route principale
 app.get('/', (req, res) => {

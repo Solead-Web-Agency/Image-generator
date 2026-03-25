@@ -496,34 +496,50 @@ class ImageGeneratorApp {
         }
 
         const subject = this.subjectInput.value.trim();
+        if (!subject) {
+            this.showMessage('Veuillez saisir un sujet', 'error');
+            return;
+        }
         promptGenerator.setSubject(subject);
 
         try {
-            this.showLoading('Génération du prompt optimisé...');
+            this.showLoading('Optimisation du prompt en cours...');
 
-            // Si l'utilisateur a fourni une clé API, utiliser GPT pour enrichir le prompt
-            if (this.apiKey) {
+            // Construire le contexte de style si un style est déjà sélectionné
+            let styleContext = null;
+            if (this.selectedStyle || this.customStyleData) {
                 try {
-                    this.generatedPrompt = await promptGenerator.generateEnrichedPromptWithAI(this.apiKey);
-                    this.showMessage('Prompt optimisé généré avec l\'IA !', 'success');
-                } catch (error) {
-                    console.error('Error with AI enrichment:', error);
-                    // Fallback : utiliser generatePrompt() si style dispo, sinon le sujet brut
-                    try {
-                        this.generatedPrompt = promptGenerator.generatePrompt();
-                    } catch {
-                        this.generatedPrompt = subject;
-                    }
-                    this.showMessage('Prompt de base généré (erreur lors de l\'enrichissement IA)', 'error');
+                    const basePrompt = promptGenerator.generatePrompt();
+                    styleContext = basePrompt;
+                } catch { /* pas de style disponible */ }
+            }
+
+            // Appel serveur pour optimiser le prompt via GPT
+            try {
+                const response = await fetch('/api/generate-prompt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        subject,
+                        styleContext,
+                        apiKey: this.apiKey || undefined
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || 'Erreur serveur');
                 }
-            } else {
-                // Utiliser le générateur de base si style dispo, sinon le sujet brut
+                this.generatedPrompt = data.prompt;
+                this.showMessage('✨ Prompt optimisé par l\'IA !', 'success');
+            } catch (apiError) {
+                console.warn('⚠️ Fallback prompt (API indisponible):', apiError.message);
+                // Fallback : prompt structuré local si style dispo, sinon sujet brut
                 try {
                     this.generatedPrompt = promptGenerator.generatePrompt();
                 } catch {
                     this.generatedPrompt = subject;
                 }
-                this.showMessage('Prompt généré ! Le style sera appliqué à la génération.', 'success');
+                this.showMessage('Prompt généré (mode hors-ligne)', 'success');
             }
 
             // Afficher le prompt
@@ -696,10 +712,65 @@ class ImageGeneratorApp {
 
         } catch (error) {
             console.error('Error generating image:', error);
-            this.showMessage(`Erreur: ${error.message}`, 'error');
+            if (error.errorType === 'safety' || /safety|rejected|content.policy/i.test(error.message)) {
+                this.showSafetyError();
+            } else {
+                this.showMessage(`Erreur: ${error.message}`, 'error');
+            }
         } finally {
             this.hideLoading();
         }
+    }
+
+    showSafetyError() {
+        // Afficher un message d'erreur de sécurité clair avec bouton pour modifier le prompt
+        const existing = document.getElementById('safetyErrorBox');
+        if (existing) existing.remove();
+
+        const box = document.createElement('div');
+        box.id = 'safetyErrorBox';
+        box.style.cssText = `
+            margin-top: 1.5rem; padding: 1.25rem 1.5rem;
+            background: #fff5f5; border: 2px solid #fca5a5;
+            border-radius: 12px; color: #7f1d1d;
+        `;
+        box.innerHTML = `
+            <div style="display:flex; align-items:flex-start; gap:0.75rem;">
+                <span style="font-size:1.5rem; flex-shrink:0;">🚫</span>
+                <div>
+                    <strong style="display:block; margin-bottom:0.4rem; font-size:1rem;">
+                        Contenu refusé par le système de sécurité
+                    </strong>
+                    <p style="margin:0 0 0.75rem; font-size:0.9rem; line-height:1.5; color:#991b1b;">
+                        Le prompt a été rejeté par OpenAI car il semble contenir un sujet sensible
+                        ou contraire à ses règles d'utilisation.<br>
+                        Reformulez votre sujet de manière plus neutre et relancez la génération.
+                    </p>
+                    <button id="safetyEditPromptBtn" class="btn-secondary" style="font-size:0.85rem; padding:0.4rem 1rem;">
+                        ✏️ Modifier le prompt
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Injecter sous le bouton de génération
+        const genBtn = document.getElementById('generateImageBtn');
+        if (genBtn && genBtn.parentElement) {
+            genBtn.parentElement.appendChild(box);
+        }
+
+        // Scroll vers le message
+        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // Bouton modifier → ouvre l'éditeur de prompt inline
+        document.getElementById('safetyEditPromptBtn')?.addEventListener('click', () => {
+            box.remove();
+            const editBtn = document.getElementById('editPromptInlineBtn');
+            if (editBtn) {
+                editBtn.click();
+                editBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
     }
 
     displayImage(imageUrl) {
@@ -1387,18 +1458,21 @@ class ImageGeneratorApp {
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('❌ Erreur API (texte brut):', errorText);
-                
+
                 let errorMessage = 'Erreur lors de la génération de l\'image';
+                let errorType = null;
                 try {
-                    const error = JSON.parse(errorText);
-                    console.error('❌ Erreur API (JSON):', error);
-                    // Support multiple error formats
-                    errorMessage = error.error?.message || error.error || error.message || errorMessage;
+                    const errorData = JSON.parse(errorText);
+                    console.error('❌ Erreur API (JSON):', errorData);
+                    errorMessage = errorData.error?.message || errorData.error || errorData.message || errorMessage;
+                    errorType = errorData.errorType || null;
                 } catch (e) {
                     errorMessage = `Erreur ${response.status}: ${errorText}`;
                 }
-                
-                throw new Error(errorMessage);
+
+                const err = new Error(errorMessage);
+                if (errorType) err.errorType = errorType;
+                throw err;
             }
 
             const data = await response.json();
